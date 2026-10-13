@@ -4,6 +4,8 @@ Prebuilt image: `vipulverulkar/personal-expense-tracker:latest`
 
 One container runs both the app and PostgreSQL — no compose setup needed.
 
+![Dashboard](screenshots/dashboard.png)
+
 ## Pull
 
 ```bash
@@ -99,3 +101,32 @@ docker run -d -p 5000:5000 \
   -v exptracker-data:/data \
   --env-file .env --name personal-expense-tracker vipulverulkar/personal-expense-tracker:latest
 ```
+
+## Screenshots
+
+Captured with `seed_demo.py` demo data:
+
+| Login | Transactions | Reports |
+|---|---|---|
+| ![Login](screenshots/login.png) | ![Transactions](screenshots/transactions.png) | ![Reports](screenshots/reports.png) |
+
+| Budgets | Data & backup | Restore |
+|---|---|---|
+| ![Budgets](screenshots/budgets.png) | ![Data](screenshots/data.png) | ![Restore](screenshots/restore.png) |
+
+| Users | User profile |
+|---|---|
+| ![Users](screenshots/users.png) | ![User profile](screenshots/user-profile.png) |
+
+| Categories | Recurring | Trash |
+|---|---|---|
+| ![Categories](screenshots/categories.png) | ![Recurring](screenshots/recurring.png) | ![Trash](screenshots/trash.png) |
+
+| Profile | Audit |
+|---|---|
+| ![Profile](screenshots/profile.png) | ![Audit](screenshots/audit.png) |
+
+> Note for Docker Hub: `screenshots/*.png` relative links only render on
+> GitHub. When pasting this into Docker Hub's overview, replace
+> `screenshots/` with your raw GitHub URL, e.g.
+> `https://raw.githubusercontent.com/<user>/<repo>/main/screenshots/`.
