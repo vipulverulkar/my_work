@@ -49,7 +49,9 @@ Entry points:
 
 `create_app()` performs, in order:
 
-1. `app.config.from_object(Config)` (env-driven), optional test overrides.
+1. `app.config.from_object(Config)` (env-driven; `config.py` has already loaded
+   the optional `app/.env` into the environment at import time), optional test
+   overrides.
 2. Warn if `SECRET_KEY` is the insecure dev default.
 3. `_init_sentry(app)` — optional Sentry (guarded import).
 4. `_init_sessions(app)` — server-side sessions (Flask-Session + cachelib;
@@ -114,10 +116,12 @@ gunicorn.conf.py          2 workers, port from $PORT, preload_app
 entrypoint.sh             starts Postgres, seeds role/db, generates SECRET_KEY, execs app
 Dockerfile                multi-stage build (wheels + runtime with PostgreSQL)
 expenses.sql              reference schema (same as init_db)
-seed_demo.py              demo data generator
+seed_demo.py              demo data generator (~130 transactions, 6 months)
+seed_bulk.py              bulk seeder (~10,000 transactions over 10 years)
 app/
   __init__.py             create_app, hooks, context processor, blueprint registry
-  config.py               env-driven configuration (single source of defaults)
+  config.py               env-driven configuration (single source of defaults; loads app/.env)
+  .env.example            documented template of the optional config file (app/.env is git-ignored)
   db.py                   Postgres adapter, schema bootstrap + migrations, tsvector search
   helpers.py              INR formatting, cents conversion, month/date & pagination utils
   jobs.py                 automatic SQL-dump backups + rotation
@@ -141,6 +145,7 @@ app/
     data/                 SQL/JSON backup & restore, bulk CSV import/restore
     bank_import/          bank CSV upload → column map → preview → import (+ saved templates)
     import_templates/     CSV encoding detection, column-mapping guess/apply helpers
+    settings/             admin editor for whitelisted app/.env tunables
     api/                  read-only JSON endpoints (/api and /api/v1)
 tests/
   test_app.py             pytest suite (Postgres required)
@@ -198,10 +203,11 @@ Authentication, account settings, user administration and the audit log.
   engine (one transaction per due date, capped by `RECURRING_MAX_CATCHUP`).
 
 ### reports
-- **Routes:** `GET /reports` (views: `daily`, `monthly`, `yearly`, `top`,
-  `categories`, `insights`, `budgets`, `forecast`), `GET /reports/export-xlsx`,
+- **Routes:** `GET /reports` (views: `daily`, `monthly`, `yearly`, `yearly-trends`, `monthly-trends`,
+  `top`, `categories`, `insights`, `budgets`, `forecast`), `GET /reports/export-xlsx`,
   `GET /reports/export-pdf`.
-- **Model:** daily/monthly/yearly rollups, YoY comparison, 12-month trends, top
+- **Model:** daily/monthly/yearly rollups, YoY comparison, 12-month trends,
+  multi-year series (`yearly_series`), top
   transactions, per-category stats & year matrix, weekday/member/savings
   insights, budget variance and a 3-month cash-flow forecast.
 - **View:** a single `reports.html` switching on `view`; Chart.js bar/line/pie
@@ -221,6 +227,31 @@ Authentication, account settings, user administration and the audit log.
   nothing written) → import. Duplicate-protected per upload.
 - **Model helpers:** `import_templates` (encoding detection, header aliasing,
   debit/credit pairing, date/amount parsing, saved mapping templates).
+
+### settings (`/settings`)
+- **Routes:** `GET/POST /settings` (admin only), `POST /settings/database`
+  (admin only), `POST /settings/restart` (admin only).
+- **Scope:** view/edit a whitelisted, non-secret subset of the `app/.env`
+  tunables (display, sessions, account policy, pagination, import guards,
+  rate limit, maintenance). Each spec points at the `Config` attribute that
+  holds its default, keeping `config.py` the single source of truth. Model
+  helpers read/validate/upsert `KEY=VALUE` lines, preserving comments and
+  unrelated keys; writes are atomic (mode `0600`). Other secrets and infra
+  keys are not exposed. Restart to apply.
+- **Database:** switch between **Local** (the default — the app's own /
+  built-in database; removes `DATABASE_URL` from the file) and **Remote**
+  (host/port/db/user/password, composed into a `DATABASE_URL`). The mode is
+  inferred: a file-saved `DATABASE_URL`, or an environment URL whose host is
+  not local, reads as `remote`; otherwise `local`. The password is never
+  rendered back (masked as `****`, blank keeps the stored one), the connection
+  is tested before anything is saved, and audit entries exclude credentials. A
+  `DATABASE_URL` set in the real environment shadows the file and is flagged
+  in the UI.
+- **Restart:** the **↻ Restart app** button triggers `_restart_process()` on a
+  short delay so the response flushes first — a gunicorn worker signals its
+  master (`SIGHUP` → graceful reload of all workers), while a dev-server
+  process re-execs itself (`os.execv`). Disabled under `TESTING` so tests
+  never kill the runner.
 
 ### api (`/api`, `/api/v1`)
 Read-only JSON: `GET /summary` (`?month=`/`?year=`), `GET /transactions`
@@ -313,9 +344,18 @@ All tunables live in `app/config.py` — the **single source of defaults**. Othe
 modules import the module-level constants rather than re-hardcoding literals;
 most are also on the `Config` class for `app.config[...]` access. Values are
 read from the environment at import time (restart to apply) and documented in
-[`.env.example`](.env.example) and the README table. The app does **not** load a
-`.env` file itself — none is required, and a `.env` is only consumed by Docker's
-`--env-file .env` (or by exporting the variables for a local run).
+[`app/.env.example`](app/.env.example) and the README table. At import the app
+loads an optional `app/.env` file via `python-dotenv` (`override=False`, so real
+environment variables always win; override the path with `ENV_FILE`).
+
+Admins can edit a safe, non-secret subset of these keys from **Master Data →
+Settings** (`app/modules/settings/`). The page reads and upserts `KEY=VALUE`
+lines in `app/.env` (comments and unlisted keys preserved, written atomically
+mode `0600`); because config is read once at startup, changes apply on restart.
+Other secrets/infra keys (`SECRET_KEY`, `POSTGRES_*`, `SENTRY_DSN`,
+seed credentials, paths) are deliberately excluded from the UI; `DATABASE_URL`
+is managed by the dedicated Database section (masked password, tested
+connection).
 
 Groups: secrets/DB (`SECRET_KEY`, `DATABASE_URL`, `POSTGRES_*`),
 display currency (`CURRENCY_SYMBOL`), sessions
@@ -384,8 +424,11 @@ observability (`SENTRY_DSN`).
 - **Docker:** one image; `entrypoint.sh` (as root) starts the in-container
   PostgreSQL, ensures the role/database, loads/generates a persisted
   `SECRET_KEY` (`/data/.secret_key`, mode 0600), defaults `DATABASE_URL`, then
-  drops to the unprivileged `appuser` for gunicorn. Volumes:
-  `/var/lib/postgresql/data` (database) and `/data` (sessions, backups).
+  drops to the unprivileged `appuser` for gunicorn. Dependencies are installed
+  at build time into a virtualenv (`/app/.venv`) owned by `appuser`, with pip
+  run as that user — never as root — so nothing lands in the system Python.
+  Volumes: `/var/lib/postgresql/data` (database) and `/data` (sessions,
+  backups).
 - **Backups:** `AUTO_BACKUP=1` writes an SQL dump on startup; `jobs._rotate`
   keeps the newest `BACKUP_KEEP`.
 - **Observability:** JSON-lines logs to stdout; `GET /healthz` (public) reports
@@ -400,7 +443,7 @@ observability (`SENTRY_DSN`).
 ```bash
 export DATABASE_URL=postgresql://user:password@localhost:5432/exptracker_test
 python3 -m pytest -q          # full suite (Postgres required)
-python -m pyflakes app/ run.py seed_demo.py tests/ gunicorn.conf.py
+python -m pyflakes app/ run.py seed_demo.py seed_bulk.py tests/ gunicorn.conf.py
 ```
 
 Tests use a real PostgreSQL database and truncate tables between tests. The
@@ -436,5 +479,9 @@ never hardcode a tunable literal elsewhere.
   (literal INSERT/DELETE only).
 - **Server-side sessions** — enable the login guard, idle timeout and 2FA
   half-session without trusting the client.
+- **`.env` over UI edits** — operators get a durable, text-based override store
+  (`app/.env`) that admins can edit from the UI; `config.py` stays the single
+  source of defaults and logic, and real env vars always win. Secrets are kept
+  out of the UI.
 - **CSS design tokens + page zoom** — one base drives the whole UI and the
   per-user font-size preference scales everything consistently.

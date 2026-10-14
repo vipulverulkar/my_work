@@ -31,6 +31,7 @@ automatically.
 | Bank import | ✅ | — |
 | Backup / restore / CSV import | ✅ | — |
 | Manage users, view the audit log | ✅ | — |
+| Edit site-wide settings (`app/.env`) | ✅ | — |
 | Change **own** font size and set up own 2FA | ✅ | ✅ |
 | Change idle timeout | ✅ | — |
 
@@ -42,8 +43,8 @@ Write actions are enforced on the server, not just hidden in the UI.
 
 - **Dashboard** — home.
 - **Transactions ▾** — All transactions · Recurring · Budgets · Bank import (admin)
-- **Reports** — all report views and exports.
-- **Master Data ▾** — Categories · Users (admin) · Profile
+- **Reports ▾** — Daily · Monthly · Yearly · Yearly trends · Monthly trends · Top · Categories · Insights · Budgets · Forecast (all views + exports).
+- **Master Data ▾** — Categories · Users (admin) · Settings (admin) · Profile
 - **Data ▾** — Backup & restore · Audit log (admin)
 - **Logout**, a **🌙/☀️ theme toggle**, and a **⛶ fullscreen toggle**.
 
@@ -163,6 +164,7 @@ Open **Reports** and pick a view from the tab strip. Every view supports
 | **📅 Daily** | One row per day for a month; income/expense/savings, trend bars, category breakdown, charts. |
 | **🗓️ Monthly** | One row per month for a year; same metrics, year charts. |
 | **📆 Yearly** | Year totals, **year-over-year growth** per month, and a 12-month savings-rate trend. |
+| **📈 Trends** | Split into two tabs: **Yearly trends** (year-by-year totals with growth vs previous year) and **Monthly trends** (36-month income-vs-expense momentum) — across all years. |
 | **🏆 Top** | Largest single income/expense entries, plus per-category entries, average ticket and share. |
 | **🏷️ Categories** | A category × month matrix with yearly total, average per month and best month. |
 | **💡 Insights** | Weekday spending pattern, spend **per member**, savings-vs-spending mix, and current recurring commitments. |
@@ -257,7 +259,34 @@ only admin, reset it directly in the database (see the README quickstart).
 
 ---
 
-## 15. Audit log (admin)
+## 15. Settings (admin)
+
+**Master Data ▾ → Settings** edits a safe, **non-secret** subset of the app's
+`.env` configuration — currency, display formats, session/account policy,
+pagination, import limits, rate limit and backup settings.
+
+- Values are validated on save (whole numbers within bounds, allowed choices,
+  non-empty text), and each change is recorded in the audit log.
+- Saving writes them to `app/.env`, preserving the file's comments and any keys
+  added by hand. Secret and infrastructure keys (`SECRET_KEY`, `DATABASE_URL`,
+  database credentials, paths) are **not** shown here — set those with
+  environment variables.
+- **Restart the app** for changes to take effect: configuration is read once at
+  startup. Real environment variables always override values in `app/.env`.
+  Use the **↻ Restart app** button (top-right) to apply saved changes without
+  touching the terminal — it reloads the server in place (sessions are kept).
+
+**Database** — choose **Local** (the default: the app's built-in database) or
+**Remote PostgreSQL** (host, port, database, user, password). The password is
+never shown back — leave it blank
+to keep the stored one. **Test connection** checks reachability without
+saving; **Save** tests first and refuses an unreachable database, so a bad
+URL can never break the next restart. Switching back to Local removes
+`DATABASE_URL` from the file.
+
+---
+
+## 16. Audit log (admin)
 
 **Data ▾ → Audit log** records deletes, password resets, imports, role changes,
 2FA events and restores, with actor and details. Use **Purge** to delete entries
@@ -265,7 +294,7 @@ older than a chosen number of days (the site may also auto-purge on startup).
 
 ---
 
-## 16. UI extras
+## 17. UI extras
 
 - **🌙 / ☀️ Theme** — toggles light/dark; the choice is remembered and defaults
   to your OS preference.
@@ -276,7 +305,7 @@ older than a chosen number of days (the site may also auto-purge on startup).
 
 ---
 
-## 17. Tips & troubleshooting
+## 18. Tips & troubleshooting
 
 - **Money formatting** uses Indian grouping (e.g. `₹12,34,567.89`).
 - **Amounts are stored exactly** (integer paise) — no rounding drift.
@@ -296,7 +325,7 @@ older than a chosen number of days (the site may also auto-purge on startup).
 
 ---
 
-## 18. JSON API
+## 19. JSON API
 
 Read-only JSON for scripts/dashboards (requires a logged-in session):
 
@@ -309,7 +338,7 @@ identically.
 
 ---
 
-## 19. Quick reference
+## 20. Quick reference
 
 | I want to… | Go to |
 |---|---|
@@ -323,4 +352,5 @@ identically.
 | Back up or restore | **Data ▾ → Backup & restore** |
 | Change font size or enable 2FA | **Master Data ▾ → Profile** |
 | Add users / reset a password | **Master Data ▾ → Users** |
+| Change site-wide defaults (currency, formats, limits) | **Master Data ▾ → Settings** |
 | See who did what | **Data ▾ → Audit log** |
