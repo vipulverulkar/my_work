@@ -47,7 +47,8 @@ which starts Postgres itself and needs no `DATABASE_URL`).
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate   # optional but recommended
-pip install -r requirements.txt   # includes pandas + openpyxl (Excel export), cachelib (sessions), reportlab (PDF), pyotp (2FA)
+pip install -r requirements.txt   # runtime deps: pandas + openpyxl (Excel), cachelib (sessions), reportlab (PDF), pyotp (2FA)
+                                  # test tools (pytest/pyflakes) are separate — see requirements-dev.txt
 export DATABASE_URL=postgresql://user:password@localhost:5432/exptracker
 python3 seed_demo.py  # optional demo data (~130 transactions + budgets)
 python3 run.py        # open http://127.0.0.1:5000  (PORT overrides 5000)
@@ -143,7 +144,10 @@ Postgres data persists in the `exptracker-pg` volume and app files
 re-creating the container with the same volumes keeps everything. Only
 deleting the volumes (`docker volume rm exptracker-pg exptracker-data`)
 deletes data. The image is a multi-stage build; Postgres starts inside the
-container and the app runs as a non-root user.
+container and the app runs as a non-root user. The build is size-tuned
+(~640 MB): test-only deps (`pytest`/`pyflakes`) are excluded, dependency
+wheels are install-only (never stored in a layer), and the PostgreSQL JIT
+libraries (`libLLVM`/`libz3`, ~155 MB) that this app never uses are dropped.
 
 `SECRET_KEY` may be omitted: on first launch the entrypoint generates a
 random one and stores it at `/data/.secret_key` (mode `0600`), so it
@@ -265,6 +269,7 @@ No upload size limit is enforced. For raw engine-level copies use `pg_dump`.
 ## Tests
 
 ```bash
+pip install -r requirements-dev.txt   # adds pytest + pyflakes (runtime deps come too)
 # Postgres must be running; point the suite at it:
 export DATABASE_URL=postgresql://user:password@localhost:5432/exptracker_test
 python3 -m pytest -q
@@ -284,6 +289,8 @@ access), **controllers** (`controllers.py` — routes) and **views**
 
 ```
 run.py            entry point (dev server + gunicorn `run:app`)
+requirements.txt        runtime deps (installed in the Docker image)
+requirements-dev.txt    adds pytest + pyflakes for local tests
 app/
   __init__.py     app factory, CSRF/rate limiting, security headers, /healthz, /metrics
   config.py       env-driven configuration (defaults + loads app/.env at startup)

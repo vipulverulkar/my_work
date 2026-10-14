@@ -441,6 +441,7 @@ observability (`SENTRY_DSN`).
 ## 12. Testing & linting
 
 ```bash
+pip install -r requirements-dev.txt   # runtime deps + pytest + pyflakes
 export DATABASE_URL=postgresql://user:password@localhost:5432/exptracker_test
 python3 -m pytest -q          # full suite (Postgres required)
 python -m pyflakes app/ run.py seed_demo.py seed_bulk.py tests/ gunicorn.conf.py
