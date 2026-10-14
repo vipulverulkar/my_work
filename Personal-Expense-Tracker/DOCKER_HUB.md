@@ -124,6 +124,28 @@ Default login is `admin / admin` on first boot (change it before exposing).
 - To use an external database instead of the in-container server:
   `-e DATABASE_URL=postgresql://user:password@host:5432/exptracker`
 
+## Container scanning
+
+Docker Hub's scan (Docker Scout) reports **3 HIGH** CVEs — all base-image OS
+packages with **no fixed version in Debian 13**, and none reachable by this app:
+
+| CVE | Package | Status |
+|---|---|---|
+| CVE-2026-74860 | libxml2 | Not affected — requires the libxml2 **Python bindings**, which aren't installed. |
+| CVE-2026-86140 | libxml2 | Not affected — DTD-validation overflow; the app parses **no XML**. |
+| CVE-2026-85091 | zlib | False positive — `gz_vacate()` (added in zlib 1.3.1.2) is absent from the shipped `+really1.3.1`. |
+
+The image embeds an OpenVEX document (`/usr/local/share/vex/`) marking these
+`not_affected`, which Docker Scout applies. To see the filtered result with the
+CLI:
+
+```bash
+docker scout cves vipulverulkar/personal-expense-tracker:latest --vex-author '.*'
+```
+
+The exceptions will be removed once Debian backports the fixes upstream
+(libxml2 2.15.4 / newer zlib).
+
 ## Update
 
 **Linux / macOS (bash):**

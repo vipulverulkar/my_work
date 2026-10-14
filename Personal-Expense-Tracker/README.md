@@ -113,7 +113,9 @@ Captured with the demo/bulk seeders — login, day-to-day pages, users, reports 
 One container runs both the app and PostgreSQL — no compose setup needed:
 
 ```bash
-docker build -t personal-expense-tracker .
+# --provenance/--sbom off so the embedded container-scan VEX is honored (see
+# "Container scanning" below); drop them if you don't need that.
+docker build --provenance=false --sbom=false -t personal-expense-tracker .
 docker run -d -p 5000:5000 \
   -v exptracker-pg:/var/lib/postgresql/data \
   -v exptracker-data:/data \
@@ -166,6 +168,39 @@ docker exec personal-expense-tracker pg_dump -U exptracker exptracker > personal
 # same volume backup on Windows PowerShell (use ${PWD}, not $PWD):
 docker run --rm -v exptracker-pg:/var/lib/postgresql/data -v exptracker-data:/data -v "${PWD}:/backup" busybox tar czf /backup/personal-expense-tracker-backup.tgz /var/lib/postgresql/data /data
 ```
+
+### Container scanning
+
+Docker Scout (used by Docker Hub) reports **3 HIGH** CVEs on the image —
+`libxml2` CVE-2026-74860 and CVE-2026-86140, and `zlib` CVE-2026-85091. All
+three are **base-image OS packages with no fixed version in Debian 13**, and
+none are reachable by this app:
+
+| CVE | Package | Why not affected |
+|---|---|---|
+| CVE-2026-74860 | libxml2 | Flaw in the libxml2 **Python SAX bindings**; not installed (no `python3-libxml2`/`lxml`, and the `libxml2` package ships no Python bindings). |
+| CVE-2026-86140 | libxml2 | `xmlSnprintfElements()` DTD-validation overflow; the app parses **no XML**, so no untrusted XML reaches libxml2 (pulled only by `postgresql-17`). |
+| CVE-2026-85091 | zlib | Overflow is in `gz_vacate()`, introduced upstream in zlib **1.3.1.2**; the image ships `+really1.3.1` where the symbol is absent. Scanner false positive. |
+
+These are recorded as OpenVEX `not_affected` statements in
+[`vex/personal-expense-tracker.vex.json`](vex/personal-expense-tracker.vex.json),
+which the image embeds at `/usr/local/share/vex/`. Docker Scout reads
+`*.vex.json` from the image filesystem and filters them from its results.
+
+> **Two requirements:** (1) the image must have **no attestations** — embed VEX
+> is ignored whenever the image has any — so build/publish with
+> `--provenance=false --sbom=false`; (2) the Scout CLI's default trust filter
+> only accepts `*@docker.com` authors, so pass `--vex-author '.*'` when
+> scanning locally.
+
+```bash
+# verify: embedded VEX removes all three (HIGH 3 -> 0)
+docker scout cves vipulverulkar/personal-expense-tracker:latest --vex-author '.*'
+```
+
+These entries can be dropped from the VEX doc once Debian backports the fixes
+(fixed only in libxml2 2.15.4 / zlib 1.3.1.2+); rebuild periodically with
+`docker build --pull` to pick up Debian point releases.
 
 ### Windows notes
 
@@ -315,6 +350,7 @@ app/
 expenses.sql      schema reference
 seed_demo.py      demo data generator (~130 transactions, 6 months)
 seed_bulk.py      bulk seeder (~10,000 transactions over 10 years, with yearly growth)
+vex/              OpenVEX container-scan exceptions (embedded in the Docker image)
 tests/            pytest suite
 screenshots/      README screenshots
 ```
