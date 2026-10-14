@@ -39,14 +39,25 @@ app with dark mode, charts, recurring transactions and roles.
 - **[User Guide](USER_GUIDE.md)** — how to use every screen (sign-in, transactions, budgets, reports, imports, backup, profile, users, settings).
 - **[Architecture](ARCHITECTURE.md)** — app factory, request lifecycle, modules, data model, security and operations.
 
-## Quickstart
+## Quickstart (local, non-Docker)
+
+Run this straight from the repo against your own PostgreSQL server — no
+Docker required (see [Docker](#docker) for the self-contained alternative,
+which starts Postgres itself and needs no `DATABASE_URL`).
 
 ```bash
+python3 -m venv .venv && source .venv/bin/activate   # optional but recommended
 pip install -r requirements.txt   # includes pandas + openpyxl (Excel export), cachelib (sessions), reportlab (PDF), pyotp (2FA)
 export DATABASE_URL=postgresql://user:password@localhost:5432/exptracker
-python seed_demo.py  # optional demo data (~130 transactions + budgets)
-python run.py        # open http://127.0.0.1:5000
+python3 seed_demo.py  # optional demo data (~130 transactions + budgets)
+python3 run.py        # open http://127.0.0.1:5000  (PORT overrides 5000)
 ```
+
+`DATABASE_URL` is **required** for this local path (Postgres-only build); the
+schema is created and migrated automatically on first start. Use `python` if
+your system does not have `python3`. Instead of exporting `DATABASE_URL`, you
+can put it in `app/.env` (`cp app/.env.example app/.env`) — an optional config
+file the app loads at startup, where real environment variables always win.
 
 Sign in with the default credentials **admin / admin** (seeded on first boot —
 change it before deploying). Configuration is read from **environment
