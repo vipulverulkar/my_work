@@ -14,8 +14,8 @@ For cashiers, managers, kitchen staff and owners. To start the POS, see
 ## 1. Daily routine (cashier)
 
 1. Open `./run.sh`, keep the terminal open, use the browser window (or start
-   the packaged app — `run.bat` on Windows, `docker compose up -d` for Docker;
-   see `README.md`).
+   the packaged app — `run.bat` on Windows, `docker compose up -d` for Docker,
+   or pull the published image from Docker Hub (§11); see `README.md`).
 2. Log in: tap your name on the login screen, enter your 4-digit PIN on the
    touch pad. Your name and role show top-right; **⏻ Logout** between staff.
 3. Tap a sweet tile on the left — no popups. Piece items add 1 per tap (repeat
@@ -147,13 +147,59 @@ Below the settings: **💾 Backup database** downloads a copy of
 3. Take a **⚙ Store → 💾 Backup** copy now and then (e.g. end of day).
 4. Close the terminal (Ctrl+C) to stop the POS.
 
-## 11. Troubleshooting
+## 11. Install from Docker Hub
+
+If Docker (or Docker Desktop on Windows/macOS) is installed, you can run the
+POS without building anything from source.
+
+1. Download the published image:
+
+   ```bash
+   docker pull vipul/indian-sweet-shop-pos:latest
+   ```
+
+2. Start the container (the named volume keeps `sweetshop.db` between runs):
+
+   ```bash
+   docker run -d --name indian-sweet-shop-pos \
+     -p 5000:5000 \
+     -v sweetshop-data:/data \
+     -e SWEETSHOP_DB=/data/sweetshop.db \
+     --restart unless-stopped \
+     vipul/indian-sweet-shop-pos:latest
+   ```
+
+3. Open `http://localhost:5000` and log in with the demo users in `README.md`
+   (`cashier` / `1234`, `manager` / `1111`, `owner` / `0000`). The first start
+   creates and seeds the database automatically.
+
+   ```bash
+   docker logs -f indian-sweet-shop-pos   # follow startup logs
+   docker stop indian-sweet-shop-pos      # stop (data stays in the volume)
+   ```
+
+**Update to a newer image:** take a backup first (⚙ Store → 💾 Backup
+database), then pull and recreate the container — the `-v sweetshop-data:/data`
+volume is preserved:
+
+```bash
+docker pull vipul/indian-sweet-shop-pos:latest
+docker stop indian-sweet-shop-pos && docker rm indian-sweet-shop-pos
+# run the docker run command from step 2 again
+```
+
+To use the image with Compose, replace `build: .` in `docker-compose.yml` with
+`image: vipul/indian-sweet-shop-pos:latest`, then run `docker compose up -d`
+(no `--build`). Use a different host port (e.g. `-p 5001:5000`) if port 5000 is
+already taken.
+
+## 12. Troubleshooting
 
 | Problem | Fix |
 |---|---|
 | Browser shows nothing / won't open | Open `http://127.0.0.1:5000` manually; keep terminal open |
 | `Address already in use` | `./run.sh --port 5001` |
-| Running with Docker | `docker compose up -d --build`, open `http://localhost:5000`; data lives in the `sweetshop-data` volume |
+| Running with Docker | Build from source with `docker compose up -d --build`, or install from Docker Hub (§11); open `http://localhost:5000`; data lives in the `sweetshop-data` volume |
 | Need to move / recover data | ⚙ Store → 💾 Backup, then ♻ Restore on the other machine (a pre-restore safety copy is kept) |
 | Discount/void says “Not authorized” | Use manager PIN (`manager` / `1111`) or switch role |
 | Production says “no recipe/BOM” | Add a recipe for the product in 🧰 Manage → Recipes |
