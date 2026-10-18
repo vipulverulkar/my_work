@@ -11,13 +11,37 @@ For cashiers, managers, kitchen staff and owners. To start the POS, see
 
 ![In-app help](docs/screenshots/help.png)
 
-## 1. Daily routine (cashier)
+## 1. Starting the POS & daily routine
 
-1. Open `./run.sh`, keep the terminal open, use the browser window (or start
-   the packaged app — `run.bat` on Windows, `docker compose up -d` for Docker,
-   or pull the published image from Docker Hub (§11); see `README.md`).
+### How to launch the app:
+
+#### 🐧 On Linux
+Open your terminal in the project folder and run:
+```bash
+./run.sh
+```
+- **First-time setup is automatic**: Creates `.venv/`, installs dependencies from `requirements.txt`, checks frontend bundle, and launches the server.
+- Automatically opens `http://127.0.0.1:5000` in your browser.
+- **Flags**: `./run.sh --port 5001` (custom port), `./run.sh --no-browser` (server-only).
+- **Desktop mode**: `cd web && npx electron .`
+
+#### 🪟 On Windows
+- **One-click launch**: Double-click **`run.bat`** in the project folder.
+- **Or via Command Prompt / PowerShell**:
+  ```cmd
+  run.bat
+  ```
+- **First-time setup is automatic**: Detects Python (ensure "Add python.exe to PATH" was checked), creates `.venv-win\`, installs dependencies, and opens `http://127.0.0.1:5000`.
+- **Flags**: `run.bat --port 5001`, `run.bat --no-browser`.
+- **Desktop mode**: `cd web && npx electron .`
+
+> 💡 **Important:** Keep the terminal or black console window open while billing. Close the window or press `Ctrl+C` when you want to stop the server.
+
+### Cashier steps:
+
+1. Open `./run.sh` (Linux) or `run.bat` (Windows), and use the browser or desktop window.
 2. Log in: tap your name on the login screen, enter your 4-digit PIN on the
-   touch pad. Your name and role show top-right; **⏻ Logout** between staff.
+   touch pad (or use your physical keyboard numpad). Your name and role show top-right; **⏻ Logout** between staff.
 3. Tap a sweet tile on the left — no popups. Piece items add 1 per tap (repeat
    taps merge; −/+ adjusts). Weight items add 500g; change the grams inline.
    The bill panel on the right shows the running **Total**.

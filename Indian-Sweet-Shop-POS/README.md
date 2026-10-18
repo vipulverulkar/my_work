@@ -8,66 +8,135 @@ Stack: a **Flask + SQLite** backend (`app.py` + `pos/`) serving a **React 19**
 frontend (`web/`), packaged as a browser app, a desktop shell (Electron), or a
 container (Docker). All data stays local in a single `sweetshop.db` file.
 
-## Quick start
+## 🚀 Quick Start & Launch Guide
 
+The POS runs identically on **Linux** and **Windows** with full offline support and local SQLite storage.
+
+---
+
+### 🐧 Launching on Linux
+
+#### 1. Prerequisites
+- **Python 3.10+** (with venv support):
+  ```bash
+  sudo apt update && sudo apt install python3 python3-venv python3-pip
+  ```
+- **Node.js 18+** *(optional, only needed if modifying or rebuilding the web UI)*
+
+#### 2. Start the App
+Run the launcher script:
 ```bash
-./run.sh                 # opens http://127.0.0.1:5000 in your browser
-./run.sh --no-browser    # server only
-./run.sh --port 5001     # if port 5000 is busy
+./run.sh
+```
+> **What it does automatically:**
+> - Creates the local Python virtual environment (`.venv/`) on first run.
+> - Installs required dependencies from `requirements.txt`.
+> - Verifies/builds the web UI bundle if missing.
+> - Launches the Flask + SQLite engine and opens `http://127.0.0.1:5000` in your default browser.
+
+#### 3. Command-Line Options
+```bash
+./run.sh --port 5001       # Change listening port if 5000 is occupied
+./run.sh --no-browser      # Start server in background without launching browser
 ```
 
-Keep the terminal open while you use the POS. The POS opens on a login screen —
-tap your name, enter your PIN on the touch pad:
-
-![POS login screen](docs/screenshots/login.png)
-
-## Run on Windows
-
-No Linux needed — same app, same bills:
-
-1. Install **Python 3.11+** from python.org — tick **“Add python.exe to PATH”**.
-2. Copy the project folder to the shop PC (skip `.venv/`, `sweetshop.db*`).
-3. Double-click **`run.bat`** — first run creates `.venv-win/` and installs Flask
-   (internet needed once), then the browser opens at `http://127.0.0.1:5000`.
-4. Keep the black window open while billing; close it to stop.
-
-Notes: custom DB path via `set SWEETSHOP_DB=D:\data\shop.db` before launching;
-if port 5000 is taken, run `.venv-win\Scripts\python.exe app.py --port 5001`;
-allow the Firewall prompt for **private networks** if shown. For a no-Python
-single file, build the `.exe` on the Windows PC:
-`py -m pip install pyinstaller && py -m PyInstaller --onefile --name IndianSweetShopPOS --add-data "web/dist;web/dist" --add-data "schema.sql;." app.py`
-→ `dist\IndianSweetShopPOS.exe` (DB is created next to the exe).
-
-## Run with Docker
-
-No Python/Node install needed — the image builds the React UI and serves the
-API + UI via Flask/gunicorn:
-
+#### 4. Custom Database Location
+To store the database on another disk, drive, or backup mount:
 ```bash
-docker compose up -d --build     # then open http://localhost:5000
-docker compose logs -f           # follow logs
-docker compose down              # stop (data stays in the named volume)
+SWEETSHOP_DB=/var/data/sweetshop.db ./run.sh
 ```
 
-The SQLite DB lives on the `sweetshop-data` volume (`/data/sweetshop.db`), so
-`down` won't lose data. To use an existing DB file, mount it and point
-`SWEETSHOP_DB` at it. Plain `docker run` works too:
-
+#### 5. Electron Desktop Mode (Linux)
+To run as a native framed desktop app:
 ```bash
-docker build -t indian-sweet-shop-pos .
-docker run -d -p 5000:5000 -v sweetshop-data:/data --name indian-sweet-shop-pos indian-sweet-shop-pos
+cd web
+npm install
+npx electron .
+```
+To generate an installable `.deb` package: `npm run dist` inside `web/`.
+
+---
+
+### 🪟 Launching on Windows
+
+#### 1. Prerequisites
+1. Download & install **Python 3.10+** from [python.org](https://www.python.org/downloads/).
+   > ⚠️ **Important:** During installation, check the box **"Add python.exe to PATH"**.
+2. **Node.js 18+** from [nodejs.org](https://nodejs.org/) *(optional, only needed if rebuilding frontend)*.
+
+#### 2. Start the App (One-Click)
+- Simply **double-click `run.bat`** in the project folder.
+- Or open **Command Prompt / PowerShell** in the project folder and type:
+  ```cmd
+  run.bat
+  ```
+
+> **What it does automatically:**
+> - Detects Python and creates a dedicated Windows virtual environment (`.venv-win\`) on first run.
+> - Installs all dependencies from `requirements.txt`.
+> - Builds the web assets if missing.
+> - Starts the local server and opens your web browser at `http://127.0.0.1:5000`.
+> - Keep the command window open while operating; close it or press `Ctrl+C` to shut down.
+
+#### 3. Windows Command-Line Options
+```cmd
+run.bat --port 5001        :: Run on port 5001
+run.bat --no-browser       :: Launch server without popping up the browser
 ```
 
-Docker on a Windows/macOS shop PC works the same via Docker Desktop.
+#### 4. Custom Database Location (Windows)
+```cmd
+set SWEETSHOP_DB=D:\SweetShopData\shop.db
+run.bat
+```
 
-Demo logins (username / PIN):
+#### 5. Windows Desktop App & Standalone EXE
+- **Native Electron Desktop App**:
+  ```cmd
+  cd web
+  npm install
+  npx electron .
+  ```
+- **Generate Windows Installer (`.exe` / NSIS)**:
+  ```cmd
+  cd web
+  npm run dist
+  ```
+- **Single-File Portable EXE (PyInstaller)**:
+  ```cmd
+  py -m pip install pyinstaller
+  py -m PyInstaller --onefile --name IndianSweetShopPOS --add-data "web/dist;web/dist" --add-data "schema.sql;." app.py
+  ```
+  The compiled portable executable will be placed in `dist\IndianSweetShopPOS.exe`.
 
-| User | PIN | Role |
-|---|---|---|
-| `cashier` | `1234` | Cashier — bill, hold, small voids |
-| `kitchen` | `2222` | Kitchen — produce, waste, stock-in |
-| `manager` | `1111` | Manager — discounts, voids, stock, catalog |
-| `owner` | `0000` | Owner — everything + P&L |
+---
+
+### 🐳 Run with Docker (Cross-Platform)
+
+No Python or Node installation needed — the multi-stage Docker image builds the web bundle and runs Flask with Gunicorn:
+
+```bash
+docker compose up -d --build     # starts container on http://localhost:5000
+docker compose logs -f           # monitor logs
+docker compose down              # stop container (data remains preserved in volume)
+```
+
+The database persists in the `sweetshop-data` Docker volume (`/data/sweetshop.db`).
+
+---
+
+### 👥 Default Demo Credentials
+
+Tap user tile on the login screen and enter the corresponding 4-digit PIN:
+
+| User | Role | PIN | Permissions |
+|---|---|---|---|
+| `cashier` | Cashier | `1234` | Billing, holds, item lookup, voids up to ₹1,000 |
+| `kitchen` | Kitchen | `2222` | Made fresh (BOM production), batch wastage, stock-in |
+| `manager` | Manager | `1111` | Overrides, discounts, all voids, catalog & recipe management |
+| `owner` | Owner | `0000` | Full administrative control, store settings, backups, P&L reports |
+
+
 
 Log in on the touchscreen (tap name + PIN); discount/void/production
 actions additionally ask for a manager PIN. Use ⏻ Logout between staff
