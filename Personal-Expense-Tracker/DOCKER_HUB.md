@@ -1,15 +1,24 @@
 # Pull from Docker Hub
 
-Prebuilt image: `vipulverulkar/personal-expense-tracker:latest`
+Prebuilt image: `vipulverulkar/personal-expense-tracker-v6.1:latest` (or version tag `:6.1`)
 
 One container runs both the app and PostgreSQL — no compose setup needed.
 
 ![Dashboard](screenshots/dashboard.png)
 
+## Artifacts & downloads
+
+- **GitHub Releases:** [Releases Page](https://github.com/vipulverulkar/Exp_tracker_V6.1_with_docker_postgres_and_sqllite/releases) — download prebuilt standalone executables and docker archives.
+- **Docker image:** [`vipulverulkar/personal-expense-tracker-v6.1`](https://hub.docker.com/r/vipulverulkar/personal-expense-tracker-v6.1) on Docker Hub.
+- **Desktop builds (Linux / Windows):** [CI/CD workflow artifacts](https://github.com/vipulverulkar/Exp_tracker_V6.1_with_docker_postgres_and_sqllite/actions/workflows/ci_cd.yml) — download `Personal-Expense-Tracker_v6.1.2_linux` or `Personal-Expense-Tracker_v6.1.2_windows`.
+- **Source code:** [GitHub repository](https://github.com/vipulverulkar/Exp_tracker_V6.1_with_docker_postgres_and_sqllite).
+
 ## Pull
 
 ```bash
-docker pull vipulverulkar/personal-expense-tracker:latest
+docker pull vipulverulkar/personal-expense-tracker-v6.1:latest
+# or pinned version:
+# docker pull vipulverulkar/personal-expense-tracker-v6.1:6.1
 ```
 
 ## Create `.env` file
@@ -62,10 +71,13 @@ admins can edit a safe subset of those settings from the UI — mount
 | `DATABASE_URL` | No | in-container server | Set only for an external DB, e.g. `postgresql://user:pass@host:5432/exptracker`. |
 | `PORT` | No | `5000` | App HTTP port (match `-p` mapping). |
 | `CURRENCY_SYMBOL` | No | `₹` | Display symbol in the UI and CSV. |
+| `FINANCIAL_YEAR_START_MONTH` | No | `4` | Financial year start month (4 = Indian FY: 1 Apr – 31 Mar default; 1 = Calendar Year). |
 | `DATE_FORMAT` / `DATETIME_FORMAT` | No | `%d/%m/%Y` / `%d/%m/%Y %H:%M:%S` | Date-only and timestamp display formats (Python strftime). |
 | `SESSION_TIMEOUT_MINUTES` | No | `5` | Idle auto-logout minutes. |
 | `DEFAULT_FONT_ZOOM` (`MIN_FONT_ZOOM`/`MAX_FONT_ZOOM`) | No | `90` (`70`/`160`) | UI font size (%) applied to every page; each user can override it on Profile. |
 | `AUTO_BACKUP` / `BACKUP_KEEP` | No | off / `10` | Startup SQL-dump backup + rotation. |
+| `ENV_FILE` | No | `app/.env` | Config file to read at startup (e.g. mount `/data/.env` to persist UI settings). |
+| `MIGRATE_FROM_DATABASE_URL` | No | unset | Source PostgreSQL DSN to automatically migrate data from at first startup. |
 | `SENTRY_DSN` | No | unset | Enables Sentry when set. |
 
 Full list with all tunables: see `app/.env.example` in the repo.
@@ -78,110 +90,93 @@ Full list with all tunables: see `app/.env.example` in the repo.
 docker run -d -p 5000:5000 \
   -v exptracker-pg:/var/lib/postgresql/data \
   -v exptracker-data:/data \
-  --name personal-expense-tracker vipulverulkar/personal-expense-tracker:latest
+  --name personal-expense-tracker-v6.1 vipulverulkar/personal-expense-tracker-v6.1:latest
 # open http://127.0.0.1:5000
 ```
 
 **Windows (CMD or PowerShell — single line, copy-paste as-is):**
 
 ```powershell
-docker run -d -p 5000:5000 -v exptracker-pg:/var/lib/postgresql/data -v exptracker-data:/data --name personal-expense-tracker vipulverulkar/personal-expense-tracker:latest
+docker run -d -p 5000:5000 -v exptracker-pg:/var/lib/postgresql/data -v exptracker-data:/data --name personal-expense-tracker-v6.1 vipulverulkar/personal-expense-tracker-v6.1:latest
 ```
 
-**With a `.env` file — optional**, add `--env-file .env` (Docker requires that
-file to exist, so create it first with `touch .env` or `cp app/.env.example .env`):
+## First login
 
-Linux / macOS:
-```bash
-docker run -d -p 5000:5000 \
-  -v exptracker-pg:/var/lib/postgresql/data \
-  -v exptracker-data:/data \
-  --env-file .env --name personal-expense-tracker vipulverulkar/personal-expense-tracker:latest
-```
+Open `http://localhost:5000` (or `http://127.0.0.1:5000`).
 
-Windows:
-```powershell
-docker run -d -p 5000:5000 -v exptracker-pg:/var/lib/postgresql/data -v exptracker-data:/data --env-file .env --name personal-expense-tracker vipulverulkar/personal-expense-tracker:latest
-```
+- Default account: **`admin` / `admin`** (seeded on first boot).
+- **Change the password immediately** from **Master Data ▾ → Users**.
 
-Then open http://127.0.0.1:5000
+## Where data lives
 
-Default login is `admin / admin` on first boot (change it before exposing).
-
-## Notes
-
-- Postgres data persists in the `exptracker-pg` volume and app files
-  (sessions, backups) in `exptracker-data` — removing and
-  re-creating the container with the same volumes keeps everything. Only
-  deleting the volumes (`docker volume rm exptracker-pg exptracker-data`)
-  deletes data.
-- `SECRET_KEY` may be omitted: on first launch the entrypoint generates a
-  random one and stores it at `/data/.secret_key` (mode `0600`), so it
-  survives restarts via the `exptracker-data` volume. Set `SECRET_KEY`
-  explicitly to take full control (explicit env always wins).
-- Keep named volumes. Do not bind-mount a Windows folder to
-  `/var/lib/postgresql/data` (Postgres needs POSIX permissions).
-- To use an external database instead of the in-container server:
-  `-e DATABASE_URL=postgresql://user:password@host:5432/exptracker`
-
-## Container scanning
-
-Docker Hub's scan (Docker Scout) reports **3 HIGH** CVEs — all base-image OS
-packages with **no fixed version in Debian 13**, and none reachable by this app:
-
-| CVE | Package | Status |
+| Data | Container path | Where to mount |
 |---|---|---|
-| CVE-2026-74860 | libxml2 | Not affected — requires the libxml2 **Python bindings**, which aren't installed. |
-| CVE-2026-86140 | libxml2 | Not affected — DTD-validation overflow; the app parses **no XML**. |
-| CVE-2026-85091 | zlib | False positive — `gz_vacate()` (added in zlib 1.3.1.2) is absent from the shipped `+really1.3.1`. |
+| PostgreSQL database | `/var/lib/postgresql/data` | Named volume `exptracker-pg` (don't bind-mount a Windows folder — Postgres needs POSIX permissions) |
+| App data (sessions, backups, receipts, secret key) | `/data` | Named volume `exptracker-data` |
+| UI settings file (optional) | `/data/.env` | Set `ENV_FILE=/data/.env` to persist changes made in **Master Data → Settings** |
 
-The image embeds an OpenVEX document (`/usr/local/share/vex/`) marking these
-`not_affected`, which Docker Scout applies. To see the filtered result with the
-CLI:
+## Seed demo data
+
+To explore the app with realistic transactions, budgets, accounts, goals, and debts:
 
 ```bash
-docker scout cves vipulverulkar/personal-expense-tracker:latest --vex-author '.*'
+docker exec -it personal-expense-tracker-v6.1 python3 seed_demo.py
 ```
 
-The exceptions will be removed once Debian backports the fixes upstream
-(libxml2 2.15.4 / newer zlib).
-
-## Update
-
-**Linux / macOS (bash):**
+## Stop, start, update
 
 ```bash
-docker pull vipulverulkar/personal-expense-tracker:latest
-docker rm -f personal-expense-tracker
+# stop:
+docker stop personal-expense-tracker-v6.1
+
+# start again:
+docker start personal-expense-tracker-v6.1
+
+# update to latest (keeps your data because volumes are kept):
+docker pull vipulverulkar/personal-expense-tracker-v6.1:latest
+docker stop personal-expense-tracker-v6.1
+docker rm personal-expense-tracker-v6.1
 docker run -d -p 5000:5000 \
   -v exptracker-pg:/var/lib/postgresql/data \
   -v exptracker-data:/data \
-  --env-file .env --name personal-expense-tracker vipulverulkar/personal-expense-tracker:latest
+  --name personal-expense-tracker-v6.1 vipulverulkar/personal-expense-tracker-v6.1:latest
 ```
 
-**Windows (CMD or PowerShell):**
+## Backup & restore
 
-```powershell
-docker pull vipulverulkar/personal-expense-tracker:latest
-docker rm -f personal-expense-tracker
-docker run -d -p 5000:5000 -v exptracker-pg:/var/lib/postgresql/data -v exptracker-data:/data --env-file .env --name personal-expense-tracker vipulverulkar/personal-expense-tracker:latest
+The container includes a full **Backup & Restore** UI at **Data ▾ → Backup & restore** (download `.sql` dumps, full-schema dumps, all-tables CSV backup, one-click restore, and ledger integrity verification via `🛡 Integrity Check`).
+
+To take raw database dumps from outside:
+
+```bash
+# backup:
+docker exec personal-expense-tracker-v6.1 pg_dump -U exptracker exptracker > backup.sql
+
+# restore:
+cat backup.sql | docker exec -i personal-expense-tracker-v6.1 psql -U exptracker exptracker
 ```
 
 ## Screenshots
 
-Captured with the demo/bulk seeders:
-
-| Login | Transactions | Reports |
+| Accounts & Net Worth | Rules Engine | Bill Calendar |
 |---|---|---|
-| ![Login](screenshots/login.png) | ![Transactions](screenshots/transactions.png) | ![Reports](screenshots/reports.png) |
+| ![Accounts](screenshots/accounts.png) | ![Rules](screenshots/rules.png) | ![Calendar](screenshots/calendar.png) |
 
-| Budgets | Data & backup | Restore |
+| Financial Goals | Debt Payoff Planner | Shared Expenses |
 |---|---|---|
-| ![Budgets](screenshots/budgets.png) | ![Data](screenshots/data.png) | ![Restore](screenshots/restore.png) |
+| ![Goals](screenshots/goals.png) | ![Debts](screenshots/debts.png) | ![Shared](screenshots/shared.png) |
 
-| Users | User profile |
-|---|---|
-| ![Users](screenshots/users.png) | ![User profile](screenshots/user-profile.png) |
+| Dashboard | Transactions | Reports |
+|---|---|---|
+| ![Dashboard](screenshots/dashboard.png) | ![Transactions](screenshots/transactions.png) | ![Reports](screenshots/reports.png) |
+
+| Budgets | Notifications & Alerts | Data & Backup |
+|---|---|---|
+| ![Budgets](screenshots/budgets.png) | ![Notifications](screenshots/notifications.png) | ![Data](screenshots/data.png) |
+
+| Users | User profile | Login |
+|---|---|---|
+| ![Users](screenshots/users.png) | ![User profile](screenshots/user-profile.png) | ![Login](screenshots/login.png) |
 
 | Categories | Recurring | Trash |
 |---|---|---|
@@ -195,4 +190,10 @@ Captured with the demo/bulk seeders:
 |---|---|
 | ![Yearly trends](screenshots/yearly-trends.png) | ![Monthly trends](screenshots/monthly-trends.png) |
 
+---
 
+## License
+
+This project is free software: you can redistribute it and/or modify it under
+the terms of the **GNU General Public License, version 3 or later
+(GPL-3.0-or-later)**, as published by the Free Software Foundation.

@@ -1,42 +1,50 @@
-# Personal Expense Tracker 💰
+# Personal Expense Tracker ₹
 
-Track income, expenses, budgets and reports — a Flask + PostgreSQL web
-app with dark mode, charts, recurring transactions and roles.
+Track income, expenses, budgets, accounts, goals, debts and reports — a
+Flask + PostgreSQL / SQLite web and desktop app with dark mode, interactive
+charts, automated rules, bill calendar, bank file ingestion, and multi-user roles.
 
 ![Dashboard](screenshots/dashboard.png)
 
 ## Features
 
-**Money management**
-- **Dashboard** — balance, monthly stats, savings rate, 6-month trend, top spending, recent activity, budget alerts
-- **Savings buckets** — flag any expense category as 🏦 savings (a `Savings` bucket is seeded); parked money is excluded from spending totals and the savings rate, and shown as Saved instead — across the dashboard, reports, API and CSV totals. Savings buckets can't carry budgets
-- **Transactions** — filter (type / category / user / month dropdown / full-text note search), sort, paginate, edit, duplicate; receipt attachments (image/PDF, max 5 MB); guided bulk actions (delete to Trash with confirm, or re-categorize) via row checkboxes; every entry records who it is managed for
-- **Recurring** — daily / weekly / monthly / yearly schedules with a start date and optional end date (rent, salary, subscriptions); due items are generated automatically on dashboard load, finished schedules show as ended
+**Money & Wealth Management**
+- **Dashboard** — total balance, monthly summary (Monthly Total Expense, Month saved, Savings rate), Yearly Expense (configured Financial Year, defaulting to Indian FY: 1 Apr – 31 Mar, or Calendar Year), quick transaction entry, recent transactions ledger, active budget warnings, and live notification badges
+- **Accounts & Net Worth** — track multiple bank accounts, savings, credit cards, cash wallets, investments, and loans with live balance calculation, total liquid balance, total net worth, and atomic inter-account transfers
+- **Financial Goals & Sinking Funds** — goal tracking with visual progress gauges, deposit contributions, target completion dates, and automatic status updates (active / achieved / archived)
+- **Debt Payoff Planner** — track debts, APR interest rates, minimum payments, and calculate payoff timelines and interest savings comparing **Avalanche** (highest interest first) vs. **Snowball** (lowest balance first) strategies
+- **Shared Group Expenses** — split any transaction across friends or housemates, monitor outstanding net balances per person, and settle splits individually or in bulk
+- **Bill Calendar & Cashflow Forecast** — interactive monthly calendar view visualizing scheduled bills, debt due dates, subscription renewals, and projected end-of-month cashflow
+- **Automation Rules Engine** — automated transaction categorizer & tagger applying pattern/regex rules to merchant and notes upon manual entry or bank statement ingestion
+- **Savings buckets** — flag any expense category as 🏦 savings (a `Savings` bucket is seeded); parked money is excluded from spending totals and the savings rate, and shown as Saved instead across dashboard, reports, API and CSV totals
+- **Transactions** — filter (type / category / account / tags / user / month / full-text note search), sort, paginate, edit, duplicate; receipt attachments (image/PDF, max 5 MB); custom tags (e.g. `trip:japan`, `work`) and tax-deductible expense tracking; guided bulk actions (delete to Trash, or re-categorize); inter-category transfer (linked debit/credit pair); **`🛡 Integrity Check`** for transaction consistency validation and non-destructive anomaly repair
+- **Recurring** — daily / weekly / monthly / yearly schedules with a start date and optional end date (rent, salary, subscriptions); due items are generated automatically on dashboard load
 - **Split transactions** — one expense spread over up to 3 extra categories, linked as a group so reports stay accurate
-- **Budgets** — monthly limits per category with progress bars and over-budget alerts
-- **Reports** — daily and monthly charts, budget-vs-actual variance, 3-month cash-flow forecast, PDF + Excel (`.xlsx`) export
-- **More reports** — yearly overview with year-over-year growth and a 12-month savings-rate trend; **yearly trends** and **monthly trends** tabs (year-by-year totals with growth + 36-month momentum across all years); top transactions (largest income/expense entries) with per-category average-ticket and share; per-category × month deep-dive matrix with total/average/best month; insights (weekday spending pattern, spend per member, savings-bucket mix vs spending, recurring commitments)
-- **Trash** — deleted transactions are kept (soft delete) with restore / permanent purge
+- **Budgets & Rollover** — monthly limits per category with progress bars, over-budget warnings, inline & dedicated budget editing (`/budgets/edit/<id>`), and optional month-to-month budget rollover for unused balances
+- **Proactive Alerts & Notifications** — in-app notification center with badge indicator for budget threshold warnings (85% and 100%), upcoming debt bills, and system notices
+- **Reports** — dedicated **Overview** view (Last 6 months trend chart & table, Top spending donut & category shares, Active monthly budgets); daily and monthly charts, budget-vs-actual variance, 3-month cash-flow forecast, tax deductible expenses summary, PDF + Excel (`.xlsx`) export
+- **More reports** — yearly overview with year-over-year growth and a 12-month savings-rate trend; **yearly trends** and **monthly trends** tabs; top transactions with average-ticket and share; category × month deep-dive matrix; insights (weekday spending pattern, spend per member, savings-bucket mix vs spending, recurring commitments)
+- **Trash** — soft deletion of transactions with one-click restore or permanent purge
 - **Nav extras** — dark/light theme toggle (persisted, respects OS preference) and fullscreen toggle (`⛶`); installable PWA manifest (`/manifest.webmanifest`, standalone display)
 
-**Data**
-- **Import & export** — CSV export (respects filters) and import (additive — never deletes)
-- **Bank statement import** (admin) — guided upload → column mapping → preview → import flow for bank CSVs (2 MB / 2000-row caps, 8-row preview, staging in server-side session, saved column-mapping templates)
-- **Backup & restore** — SQL-dump backup of the whole database; restore from `.sql`, legacy `.json`, or CSV files (validated first — invalid files change nothing); optional automatic startup backups with rotation
+**Data & Ingestion**
+- **Bank statement import** (admin) — guided upload supporting **OFX**, **QFX**, **QIF**, and **CSV** formats with column mapping, 8-row preview, automated rule execution, and saved column-mapping templates
+- **Import & export** — CSV export (respects filters) and import (additive — never deletes); full-table CSV downloads and desktop native file download bridge
+- **Backup & restore** — full-schema SQL-dump backup of the whole database; restore from `.sql`, legacy `.json`, or CSV files (validated first — invalid files change nothing); database-to-database migration (automatic at startup or manual); optional automatic startup backups with rotation; **`🛡 Integrity Check`** validation on the data management page
 
-**Accounts & security**
+**Accounts & Security**
 - **Roles** — admin (full access) and viewer (read-only); every write route is server-enforced
 - **Two-factor auth** — TOTP via any authenticator app, enforced as a second login step
 - **User management** — add accounts, reset passwords, change roles (passwords: min 8 chars, letters + digits)
 - **Font size** — per-user zoom of the whole UI (70–160%) from Profile, with live preview; stored on the account and applied to every page (site default 90%)
 - **Audit log** — deletes, password resets, imports and role changes are recorded; retention purging
-- **Site settings** — admins edit a safe, non-secret subset of the `app/.env` config (currency, display formats, session/account policy, pagination, import limits, rate limit, backups) from **Master Data → Settings**; changes apply on restart
+- **Site settings** — admins edit a safe, non-secret subset of the `app/.env` config (financial year start month defaulting to Indian FY: 1 Apr – 31 Mar, currency symbol, display formats, session/account policy, pagination, import limits, rate limit, backups) from **Master Data → Settings**; changes apply on restart
 - **Sessions** — idle auto-logout after 5 min (per-user override, `SESSION_TIMEOUT_MINUTES` for the default) with a live nav countdown that resets on activity, warns at 1 min and signs out automatically; server-side sessions (CacheLib filesystem backend), login rate limiting, CSRF protection on all forms
 - **Ops** — health check (`/healthz`), Prometheus metrics (`/metrics`), JSON API (`/api/v1/*`, legacy `/api/*`), optional Sentry
 
 ## Documentation
 
-- **[User Guide](USER_GUIDE.md)** — how to use every screen (sign-in, transactions, budgets, reports, imports, backup, profile, users, settings).
+- **[User Guide](USER_GUIDE.md)** — how to use every screen (accounts, rules, calendar, goals, debts, shared expenses, notifications, transactions, budgets, reports, imports, backup, profile, users, settings).
 - **[Architecture](ARCHITECTURE.md)** — app factory, request lifecycle, modules, data model, security and operations.
 
 ## Quickstart (local, non-Docker)
@@ -50,7 +58,7 @@ python3 -m venv .venv && source .venv/bin/activate   # optional but recommended
 pip install -r requirements.txt   # runtime deps: pandas + openpyxl (Excel), cachelib (sessions), reportlab (PDF), pyotp (2FA)
                                   # test tools (pytest/pyflakes) are separate — see requirements-dev.txt
 export DATABASE_URL=postgresql://user:password@localhost:5432/exptracker
-python3 seed_demo.py  # optional demo data (~130 transactions + budgets)
+python3 seed_demo.py  # optional demo data (transactions, budgets, accounts, goals, debts)
 python3 run.py        # open http://127.0.0.1:5000  (PORT overrides 5000)
 ```
 
@@ -80,21 +88,82 @@ Amounts are stored as **integer cents** in the database — no floating-point
 rounding errors — and converted for display (Indian-style number formatting,
 configurable symbol).
 
+## Desktop app (standalone executable)
+
+The app can be packaged as a standalone desktop executable that runs locally
+without Docker or an external PostgreSQL server. It uses an embedded SQLite
+database by default and opens in a native window (pywebview).
+
+**Build (on the target OS — PyInstaller cannot cross-compile):**
+
+```bash
+# Linux
+./build_linux.sh
+# -> dist/Personal-Expense-Tracker_v6.1.2_linux
+
+# Windows (PowerShell)
+./build_windows.ps1
+# -> dist\Personal-Expense-Tracker_v6.1.2_windows.exe
+```
+
+Desktop build includes all required Python modules and dependencies (Flask, CSRF, rate limiter, sessions, pandas, openpyxl, pyotp, reportlab, psycopg, dotenv).
+Linux native GUI: uses system `gir1.2-webkit2-4.1` (WebKitGTK). If WebKitGTK or display is not installed on the system, the executable automatically falls back to opening the default web browser.
+Windows native GUI: uses Edge WebView2 Runtime (preinstalled on Windows 10/11).
+
+**Run:** launch `dist/Personal-Expense-Tracker_v6.1.2_linux` (Linux) or `dist\Personal-Expense-Tracker_v6.1.2_windows.exe` (Windows).
+
+### Standalone Storage & SQL File Locations (Linux & Windows)
+
+The standalone desktop executable automatically manages its live database, SQL backups, sessions, and configuration in standard user directories:
+
+| Component | Linux Location | Windows Location | Description |
+|---|---|---|---|
+| **Live SQLite Database** | `~/.local/share/exptracker/exptracker.db` | `%LOCALAPPDATA%\exptracker\exptracker.db`<br>*(typically `C:\Users\<User>\AppData\Local\exptracker\exptracker.db`)* | The active embedded database containing all transactions, accounts, categories, and configurations. |
+| **Automated Backups (`.sql`)** | `~/.local/share/exptracker/backups/` | `%LOCALAPPDATA%\exptracker\backups\` | Automated startup SQL dumps (`backup_*.sql`) generated when auto-backup is active. |
+| **Settings Configuration** | `~/.local/share/exptracker/.env` | `%LOCALAPPDATA%\exptracker\.env` | Persistent environment overrides saved from the UI settings screen. |
+| **Session Cache** | `~/.local/share/exptracker/flask_sessions/` | `%LOCALAPPDATA%\exptracker\flask_sessions\` | Server-side user session cache. |
+| **Exported SQL Backups** | Native Save As dialog / `~/Downloads/` | Native Save As dialog / `C:\Users\<User>\Downloads\` | User-prompted exports downloaded from **Data ▾ → Backup & restore**. |
+| **Reference SQL Schema** | `expenses.sql` (repository root) | `expenses.sql` (repository root) | Full reference PostgreSQL / SQLite DDL schema file. |
+
+> **Quick Access:**
+> - **Windows:** Press <kbd>Win</kbd> + <kbd>R</kbd>, enter `%LOCALAPPDATA%\exptracker`, and press **Enter** to open directly in File Explorer.
+> - **Linux:** Run `cd ~/.local/share/exptracker` in your terminal or file manager.
+
+**Remote PostgreSQL:** open **Master Data → Settings → Database**, enter/test
+a `postgresql://` URL and save; restart the app to apply. Settings persist in
+the data dir `.env`.
+
+## Artifacts & downloads
+
+- **GitHub Releases:** [Releases Page](https://github.com/vipulverulkar/Exp_tracker_V6.1_with_docker_postgres_and_sqllite/releases) — download prebuilt standalone executables and docker archives for latest releases.
+- **Desktop builds (Linux / Windows):** [CI/CD workflow artifacts](https://github.com/vipulverulkar/Exp_tracker_V6.1_with_docker_postgres_and_sqllite/actions/workflows/ci_cd.yml) — download `Personal-Expense-Tracker_v6.1.2_linux` or `Personal-Expense-Tracker_v6.1.2_windows`.
+- **Docker image archive:** `Personal-Expense-Tracker_v6.1.2_docker.tar.gz` from workflow artifacts or GitHub Releases.
+- **Docker Hub image:** [`vipulverulkar/personal-expense-tracker-v6.1`](https://hub.docker.com/r/vipulverulkar/personal-expense-tracker-v6.1) on Docker Hub.
+- **Source code:** [GitHub repository](https://github.com/vipulverulkar/Exp_tracker_V6.1_with_docker_postgres_and_sqllite).
+
 ## Screenshots
 
-Captured with the demo/bulk seeders — login, day-to-day pages, users, reports and the numbered backup/restore flow:
+Captured with the automated headless screenshot suite (`python3 scripts/generate_screenshots.py`) covering all financial planning, tracking, wealth management, and operational views:
 
-| Login | Transactions | Reports |
+| Accounts & Net Worth | Rules Engine | Bill Calendar |
 |---|---|---|
-| ![Login](screenshots/login.png) | ![Transactions](screenshots/transactions.png) | ![Reports](screenshots/reports.png) |
+| ![Accounts](screenshots/accounts.png) | ![Rules](screenshots/rules.png) | ![Calendar](screenshots/calendar.png) |
 
-| Budgets | Data & backup | Restore |
+| Financial Goals | Debt Payoff Planner | Shared Expenses |
 |---|---|---|
-| ![Budgets](screenshots/budgets.png) | ![Data](screenshots/data.png) | ![Restore](screenshots/restore.png) |
+| ![Goals](screenshots/goals.png) | ![Debts](screenshots/debts.png) | ![Shared](screenshots/shared.png) |
 
-| Users | User profile |
-|---|---|
-| ![Users](screenshots/users.png) | ![User profile](screenshots/user-profile.png) |
+| Dashboard | Transactions | Reports |
+|---|---|---|
+| ![Dashboard](screenshots/dashboard.png) | ![Transactions](screenshots/transactions.png) | ![Reports](screenshots/reports.png) |
+
+| Budgets | Notifications & Alerts | Data & Backup |
+|---|---|---|
+| ![Budgets](screenshots/budgets.png) | ![Notifications](screenshots/notifications.png) | ![Data](screenshots/data.png) |
+
+| Users | User profile | Login |
+|---|---|---|
+| ![Users](screenshots/users.png) | ![User profile](screenshots/user-profile.png) | ![Login](screenshots/login.png) |
 
 | Categories | Recurring | Trash |
 |---|---|---|
@@ -108,18 +177,27 @@ Captured with the demo/bulk seeders — login, day-to-day pages, users, reports 
 |---|---|
 | ![Yearly trends](screenshots/yearly-trends.png) | ![Monthly trends](screenshots/monthly-trends.png) |
 
+| Inter-Category Transfer | Database Migration |
+|---|---|
+| ![Transfer](screenshots/transfer.png) | ![Migrate](screenshots/migrate.png) |
+
 ## Docker
 
-One container runs both the app and PostgreSQL — no compose setup needed:
+Prebuilt image: `vipulverulkar/personal-expense-tracker-v6.1:latest` (or tag `:6.1`)
+```bash
+docker pull vipulverulkar/personal-expense-tracker-v6.1:latest
+```
+
+Or build locally — one container runs both the app and PostgreSQL (no compose setup needed):
 
 ```bash
 # --provenance/--sbom off so the embedded container-scan VEX is honored (see
 # "Container scanning" below); drop them if you don't need that.
-docker build --provenance=false --sbom=false -t personal-expense-tracker .
+docker build --provenance=false --sbom=false -t personal-expense-tracker-v6.1 .
 docker run -d -p 5000:5000 \
   -v exptracker-pg:/var/lib/postgresql/data \
   -v exptracker-data:/data \
-  --name personal-expense-tracker personal-expense-tracker
+  --name personal-expense-tracker-v6.1 personal-expense-tracker-v6.1
 # open http://127.0.0.1:5000
 ```
 
@@ -132,7 +210,7 @@ else. To override settings, the config file is **optional** — add `--env-file 
 docker run -d -p 5000:5000 \
   -v exptracker-pg:/var/lib/postgresql/data \
   -v exptracker-data:/data \
-  --env-file app/.env --name personal-expense-tracker personal-expense-tracker
+  --env-file app/.env --name personal-expense-tracker-v6.1 personal-expense-tracker-v6.1
 ```
 
 Note: Docker's `--env-file` flag itself requires the file to exist, so only use
@@ -161,7 +239,7 @@ Set `SECRET_KEY` explicitly to take full control (explicit env always wins).
 docker run --rm -v exptracker-pg:/var/lib/postgresql/data -v exptracker-data:/data -v "$PWD":/backup busybox tar czf /backup/personal-expense-tracker-backup.tgz /var/lib/postgresql/data /data
 docker run --rm -v exptracker-pg:/var/lib/postgresql/data -v exptracker-data:/data -v "$PWD":/backup busybox tar xzf /backup/personal-expense-tracker-backup.tgz -C /
 # raw database dump from the running container:
-docker exec personal-expense-tracker pg_dump -U exptracker exptracker > personal-expense-tracker-dump.sql
+docker exec personal-expense-tracker-v6.1 pg_dump -U exptracker exptracker > personal-expense-tracker-dump.sql
 ```
 
 ```powershell
@@ -179,7 +257,7 @@ none are reachable by this app:
 | CVE | Package | Why not affected |
 |---|---|---|
 | CVE-2026-74860 | libxml2 | Flaw in the libxml2 **Python SAX bindings**; not installed (no `python3-libxml2`/`lxml`, and the `libxml2` package ships no Python bindings). |
-| CVE-2026-86140 | libxml2 | `xmlSnprintfElements()` DTD-validation overflow; the app parses **no XML**, so no untrusted XML reaches libxml2 (pulled only by `postgresql-17`). |
+| CVE-2026-86140 | libxml2 | `xmlSnprintfElements()` DTD-validation overflow; the app parses **no untrusted DTD XML**, so no untrusted XML reaches libxml2 (pulled only by `postgresql-17`). |
 | CVE-2026-85091 | zlib | Overflow is in `gz_vacate()`, introduced upstream in zlib **1.3.1.2**; the image ships `+really1.3.1` where the symbol is absent. Scanner false positive. |
 
 These are recorded as OpenVEX `not_affected` statements in
@@ -195,12 +273,8 @@ which the image embeds at `/usr/local/share/vex/`. Docker Scout reads
 
 ```bash
 # verify: embedded VEX removes all three (HIGH 3 -> 0)
-docker scout cves vipulverulkar/personal-expense-tracker:latest --vex-author '.*'
+docker scout cves vipulverulkar/personal-expense-tracker-v6.1:latest --vex-author '.*'
 ```
-
-These entries can be dropped from the VEX doc once Debian backports the fixes
-(fixed only in libxml2 2.15.4 / zlib 1.3.1.2+); rebuild periodically with
-`docker build --pull` to pick up Debian point releases.
 
 ### Windows notes
 
@@ -225,7 +299,7 @@ applies after a restart. The table below lists the common variables
 |---|---|---|
 | `ENV_FILE` | `app/.env` | Path of the optional config file the app loads at startup |
 | `SECRET_KEY` | dev default / auto-generated in Docker | Flask sessions — set explicitly in production; when unset, the container generates a random key on first launch and persists it at `/data/.secret_key` |
-| `DATABASE_URL` | in-container server | PostgreSQL DSN — defaults to the container's own server, e.g. `postgresql://user:password@127.0.0.1:5432/exptracker`; switch between **Local** (default) and **Remote** from **Master Data → Settings → Database** (connection is tested before save) |
+| `DATABASE_URL` | in-container server | PostgreSQL or SQLite DSN — e.g. `postgresql://user:password@127.0.0.1:5432/exptracker` or `sqlite:///path/to/data.db`; switch between **Local** (default) and **Remote** from **Master Data → Settings → Database** (connection is tested before save) |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `exptracker` | In-container Postgres role, password and database (persisted in `/var/lib/postgresql/data`) |
 | `SESSION_TIMEOUT_MINUTES` | `5` | Idle minutes before auto-logout (per-user override on Profile) |
 | `SESSION_TYPE` | `filesystem` | Server-side sessions; `cookie` reverts to client-side cookies |
@@ -247,8 +321,8 @@ applies after a restart. The table below lists the common variables
 | `FONT_ZOOM_STEP` | `5` | Step of the Profile font-size slider (percent) |
 | `DEFAULT_USERNAME` / `DEFAULT_PASSWORD` | `admin` / `admin` | First-boot seed account (only when users table is empty) |
 | `CSV_IMPORT_ROW_LIMIT` | `2000` | Max rows per CSV/bank import |
-| `BANK_IMPORT_MAX_BYTES` | `2097152` | Max bank CSV upload (bytes) |
-| `BANK_IMPORT_ROW_LIMIT` | `2000` | Max bank CSV rows per import |
+| `BANK_IMPORT_MAX_BYTES` | `2097152` | Max bank file upload (bytes) |
+| `BANK_IMPORT_ROW_LIMIT` | `2000` | Max bank transactions per import |
 | `BANK_IMPORT_PREVIEW_ROWS` | `8` | Bank import preview sample size |
 | `RECEIPT_MAX_BYTES` | `5242880` | Max receipt file size (bytes) |
 | `RECEIPT_ALLOWED_EXTS` | `png,jpg,jpeg,gif,pdf,webp` | Allowed receipt extensions |
@@ -257,62 +331,18 @@ applies after a restart. The table below lists the common variables
 | `TRANSACTIONS_PER_PAGE_DEFAULT` | `10` | Transactions list page size |
 | `SENTRY_DSN` | *(unset)* | Enables Sentry error tracking when set |
 | `PORT` | `5000` | HTTP port for `python run.py` and gunicorn (`gunicorn.conf.py` honors it; the Docker healthcheck follows it too) |
-
-### Database (PostgreSQL only)
-
-PostgreSQL is the only supported backend (`psycopg` is in
-`requirements.txt`). Inside the container the entrypoint starts a local
-Postgres server and defaults `DATABASE_URL` to it — set `DATABASE_URL`
-explicitly only to use an external database instead:
-
-```bash
-DATABASE_URL=postgresql://user:password@localhost:5432/exptracker
-```
-
-The schema is created (and older databases migrated) automatically on startup;
-`seed_demo.py` seeds demo data into the configured database. The active
-database is shown on the **Data** page and in `/healthz`.
-
-Full-text note search uses a generated `tsvector` column with a GIN index —
-with a plain case-insensitive (`ILIKE`) fallback if it is unavailable.
-Category/name search is case-insensitive too.
-
-### Backup & restore
-
-The **Data** page is split into numbered sections so backup and restore can't
-be mixed up:
-
-1. **Backup (download, safe)** — SQL dump covering categories, budgets,
-   transactions, users and recurring transactions (downloaded as
-   `personal-expense-tracker-backup-….sql`). A legacy `.json`
-   download is also available.
-2. **Restore from backup file (destructive)** — upload a `.sql` dump (or a
-   legacy `.json` snapshot) to replace all current data. Guarded by a
-   confirmation checkbox, validated before anything is wiped, id sequences
-   reset — and existing data is left untouched if the file is invalid.
-   (Backup files keep the historical `exptracker` format id/header, so
-   backups from older releases still restore.)
-3. **CSV files — one picker, two modes** — upload the same three CSVs and
-   choose **Add** (appends rows, never deletes) or **Replace** (wipes and
-   re-imports the data tables behind a confirmation checkbox — atomic: a
-   mid-restore failure rolls everything back). Users are
-   always preserved (CSV has no user format); recurring schedules are
-   removed. Use a `.sql` backup for a full-fidelity restore.
-
-No upload size limit is enforced. For raw engine-level copies use `pg_dump`.
+| `MIGRATE_FROM_DATABASE_URL` | *(unset)* | Source PostgreSQL DSN to automatically migrate existing data from on startup |
+| `AUTO_MIGRATE` | `off` | Set `1` to run auto-migration even if target tables already contain data |
 
 ## Tests
 
 ```bash
-pip install -r requirements-dev.txt   # adds pytest + pyflakes (runtime deps come too)
-# Postgres must be running; point the suite at it:
+pip install -r requirements-dev.txt   # adds pytest + pyflakes
+# Postgres or SQLite can be used; e.g. for PostgreSQL:
 export DATABASE_URL=postgresql://user:password@localhost:5432/exptracker_test
 python3 -m pytest -q
-# lint (the only expected hits are intentional: the route-registration
-# side-effect imports in app/modules/*/__init__.py, and the
-# PER_PAGE_CHOICES re-export in transactions/models.py used by its
-# controller as models.PER_PAGE_CHOICES):
-python -m pyflakes app/ run.py seed_demo.py seed_bulk.py tests/ gunicorn.conf.py
+# lint (must report no issues):
+python -m pyflakes app/ run.py seed_demo.py seed_bulk.py tests/ gunicorn.conf.py scripts/
 ```
 
 ## Structure
@@ -323,42 +353,56 @@ access), **controllers** (`controllers.py` — routes) and **views**
 (`templates/`):
 
 ```
-run.py            entry point (dev server + gunicorn `run:app`)
+run.py                  entry point (dev server + gunicorn `run:app`)
 requirements.txt        runtime deps (installed in the Docker image)
 requirements-dev.txt    adds pytest + pyflakes for local tests
+requirements-desktop.txt PyInstaller & pywebview desktop dependencies
 app/
-  __init__.py     app factory, CSRF/rate limiting, security headers, /healthz, /metrics
-  config.py       env-driven configuration (defaults + loads app/.env at startup)
-  db.py           PostgreSQL adapter, schema bootstrap + migrations, tsvector search
-  helpers.py      INR formatting, cents conversion, month/date utilities
-  jobs.py         automatic backup + rotation
-  templates/      shared views: base.html, error.html
-  static/         style.css (light/dark; :root design tokens — type/radius/space scales), app.js (theme + fullscreen toggles, INR formatting, validation, bulk select, idle countdown)
+  __init__.py           app factory, CSRF/rate limiting, security headers, /healthz, /metrics
+  config.py             env-driven configuration (defaults + loads app/.env at startup)
+  db.py                 PostgreSQL / SQLite adapter, schema bootstrap + migrations, tsvector search
+  helpers.py            INR formatting, cents conversion, month/date utilities
+  jobs.py               automatic backup + rotation
+  templates/            shared views: base.html, error.html, _macros.html
+  static/               style.css (design tokens, dark/light themes), app.js
   modules/
-    auth/         login (+ TOTP step), roles, profile, user admin, audit log
-    dashboard/    home: summaries, 6-month trend, top spending, budget alerts
-    transactions/ list/filter/sort/paginate, CRUD, splits, receipts, bulk ops, trash, CSV import/export
-    recurring/    scheduled transactions (daily/weekly/monthly/yearly)
-    categories/   category management
-    budgets/      monthly limits + status
-    reports/      daily/monthly charts, budget variance, forecast, yearly + YoY, top transactions, category deep-dive, insights, PDF + Excel export
-    data/         bulk CSV import, CSV restore, SQL-dump (+ legacy JSON) backup/restore
-    bank_import/  bank CSV upload → column map → preview → import (+ saved mapping templates, admin-only writes)
-    import_templates/ CSV encoding detection + saved bank-import mapping templates
-    settings/     admin editor for a safe subset of app/.env tunables
-    api/          JSON endpoints (/api + /api/v1, no views)
-expenses.sql      schema reference
-seed_demo.py      demo data generator (~130 transactions, 6 months)
-seed_bulk.py      bulk seeder (~10,000 transactions over 10 years, with yearly growth)
-vex/              OpenVEX container-scan exceptions (embedded in the Docker image)
-tests/            pytest suite
-screenshots/      README screenshots
+    accounts/           multi-account management, liquid balance, net worth, transfers
+    rules/              transaction categorizer & tagger rule engine
+    calendar_view/      monthly calendar of bills, debt payments & cashflow forecast
+    goals/              financial targets, sinking funds, progress tracking
+    debts/              debt reduction planner (Avalanche vs. Snowball payoff simulators)
+    shared/             group expense splitting & participant settlements
+    notifications/      in-app alerts, budget threshold warnings, bill notifications
+    auth/               login (+ TOTP step), roles, profile, user admin, audit log
+    dashboard/          home: summaries, monthly total expense, yearly expense, quick add, recent activity, budget alerts
+    transactions/       list/filter/sort/paginate, CRUD, splits, tags, receipts, trash, integrity check
+    recurring/          scheduled transactions (daily/weekly/monthly/yearly)
+    categories/         category management
+    budgets/            monthly limits, rollover budgets + status
+    reports/            overview (6-month trend, top spending, budgets), daily/monthly charts, variance, tax deductions, forecast, exports
+    data/               bulk CSV import/restore, SQL-dump backup/restore, integrity check
+    bank_import/        OFX, QFX, QIF and CSV bank statement parsing & import
+    import_templates/   saved bank-import column mapping templates
+    settings/           admin editor for a safe subset of app/.env tunables
+    api/                JSON endpoints (/api + /api/v1, no views)
+expenses.sql            PostgreSQL schema reference
+seed_demo.py            demo data generator (~140 transactions, budgets, accounts, goals, debts)
+seed_bulk.py            bulk seeder (~10,000 transactions over 10 years, with yearly growth)
+scripts/
+  generate_screenshots.py headless browser screenshot generation tool
+vex/                    OpenVEX container-scan exceptions (embedded in the Docker image)
+tests/                  pytest suite with conftest.py shared fixtures
+screenshots/            README & documentation screenshots
 ```
 
-Schema: `categories(id, name, type)` · `transactions(id, amount*, type,
-category_id, date, note, split_group, user_id,
-deleted_at)` · `budgets(id, category_id, monthly_limit*)` ·
-`recurring_transactions(id, amount*, frequency, next_run_date, active, …)` ·
-`users(id, username, password_hash, role, totp_*, session_timeout_minutes,
-font_zoom)` · `audit_logs(id, user_id, action, target_*, details)` — `*` = integer
-cents.
+## Developer
+
+- Name: Vipul Verulkar
+- Email: contact@vipulverulkar@gmail.com
+- Location: India
+
+## License
+
+This project is free software: you can redistribute it and/or modify it under
+the terms of the **GNU General Public License, version 3 or later
+(GPL-3.0-or-later)**, as published by the Free Software Foundation.

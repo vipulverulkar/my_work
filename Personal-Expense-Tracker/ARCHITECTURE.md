@@ -5,10 +5,17 @@ expenses, budgets, recurring schedules and reports. This document describes how
 the code is organised, how a request flows through it, the data model, and the
 operational design. For end-user instructions see [`USER_GUIDE.md`](USER_GUIDE.md).
 
-- **Version:** 2.0.0 (`app/config.py:APP_VERSION`)
+- **Version:** 6.1.2 (`app/config.py:APP_VERSION`)
 - **Backend:** Python 3.12, Flask 3.x, PostgreSQL (only supported engine)
 - **Frontend:** Server-rendered Jinja2 templates, vanilla JS (Chart.js from CDN), one CSS file
 - **Packaging:** One Docker image runs both the app (gunicorn) and PostgreSQL
+
+## Artifacts & downloads
+
+- **GitHub Releases:** [Releases Page](https://github.com/vipulverulkar/Exp_tracker_V6.1_with_docker_postgres_and_sqllite/releases) — download prebuilt standalone executables and docker archives.
+- **Desktop builds (Linux / Windows):** [CI/CD workflow artifacts](https://github.com/vipulverulkar/Exp_tracker_V6.1_with_docker_postgres_and_sqllite/actions/workflows/ci_cd.yml) — download `Personal-Expense-Tracker_v6.1.2_linux` or `Personal-Expense-Tracker_v6.1.2_windows`.
+- **Docker image:** [`vipulverulkar/personal-expense-tracker-v6.1`](https://hub.docker.com/r/vipulverulkar/personal-expense-tracker-v6.1) on Docker Hub.
+- **Source code:** [GitHub repository](https://github.com/vipulverulkar/Exp_tracker_V6.1_with_docker_postgres_and_sqllite).
 
 ---
 
@@ -135,25 +142,95 @@ app/
     receipts/             uploaded receipt attachments
     icon.svg              PWA icon
   modules/
+    accounts/             multi-account management, liquid balance, net worth, transfers
+    rules/                pattern/regex transaction categorizer & tagger engine
+    calendar_view/        monthly calendar of bills, debt payments & cashflow forecast
+    goals/                financial targets, sinking funds, progress tracking
+    debts/                debt payoff planner (Avalanche vs. Snowball payoff simulations)
+    shared/               group expense splitting & participant settlements
+    notifications/        in-app alerts, budget threshold warnings, bill notifications
     auth/                 login (+ TOTP second factor), roles, profile, user admin, audit log
-    dashboard/            home: totals, 6-month trend, top spending, budget alerts
-    transactions/         list/filter/sort/paginate, CRUD, splits, receipts, bulk ops, trash, CSV import/export
+    dashboard/            home: totals, monthly total expense, yearly expense, quick add, recent activity, budget alerts
+    transactions/         list/filter/sort/paginate, CRUD, splits, receipts, tags, trash, integrity check, CSV
     categories/           category CRUD, income/expense, savings-bucket flag
-    budgets/              monthly limits + status
+    budgets/              monthly limits, rollover budgets + status
     recurring/            scheduled transactions (daily/weekly/monthly/yearly) + engine
-    reports/              daily/monthly/yearly/top/categories/insights/budgets/forecast + PDF/Excel
-    data/                 SQL/JSON backup & restore, bulk CSV import/restore
-    bank_import/          bank CSV upload → column map → preview → import (+ saved templates)
+    reports/              overview (6-month trend, top spending, active budgets), daily/monthly/yearly/top/categories/insights/budgets/forecast/tax/tags + PDF/Excel
+    data/                 SQL/JSON backup & restore, all-tables CSV backup, database migration, integrity check
+    bank_import/          OFX/QFX/QIF/CSV bank statement ingestion (+ saved templates)
     import_templates/     CSV encoding detection, column-mapping guess/apply helpers
     settings/             admin editor for whitelisted app/.env tunables
     api/                  read-only JSON endpoints (/api and /api/v1)
 tests/
-  test_app.py             pytest suite (Postgres required)
+  conftest.py             shared pytest fixtures and plugin registration
+  test_app.py             core pytest suite (PostgreSQL and SQLite)
+  test_new_features.py    tests for accounts, rules, calendar, goals, debts, shared, alerts
 ```
 
 ---
 
 ## 5. Module reference
+
+### accounts (`app/modules/accounts/`)
+Multi-account management, liquid asset tracking, total net worth, and inter-account transfers.
+
+- **Routes:** `GET /accounts`, `GET/POST /accounts/create`, `GET/POST /accounts/<id>/edit`,
+  `POST /accounts/<id>/delete`, `GET/POST /accounts/transfer`.
+- **Model:** Ledger balance calculation, liquid balance (checking, savings, cash),
+  net worth (assets minus credit card & loan liabilities), atomic balance updates.
+- **Templates:** `list.html`, `edit.html`, `transfer.html`.
+
+### rules (`app/modules/rules/`)
+Automated transaction rule engine for merchant categorisation and tagging.
+
+- **Routes:** `GET /rules`, `POST /rules/create`, `GET/POST /rules/<id>/edit`,
+  `POST /rules/<id>/delete`, `POST /rules/<id>/toggle`.
+- **Model:** Pattern compilation (regex/substring), match field selection (`note` or `merchant`),
+  automated category assignment and tag application on transaction insert.
+- **Templates:** `index.html`, `edit.html`.
+
+### calendar_view (`app/modules/calendar_view/`)
+Monthly calendar grid displaying scheduled commitments and cashflow projections.
+
+- **Routes:** `GET /calendar`.
+- **Model:** Merges recurring transaction schedule projections, debt due dates, and
+  recurring commitments into monthly calendar cells; computes month projected cash balance.
+- **Templates:** `index.html`.
+
+### goals (`app/modules/goals/`)
+Financial savings goals and sinking fund targets.
+
+- **Routes:** `GET /goals`, `POST /goals/create`, `GET/POST /goals/<id>/edit`,
+  `POST /goals/<id>/delete`, `POST /goals/<id>/contribute`.
+- **Model:** Goal tracking, target dates, progress percentages, contribution deposits,
+  automatic status transitions (`active` -> `achieved` -> `archived`).
+- **Templates:** `index.html`, `edit.html`.
+
+### debts (`app/modules/debts/`)
+Debt payoff planning and acceleration strategy simulators.
+
+- **Routes:** `GET /debts`, `POST /debts/create`, `GET/POST /debts/<id>/edit`,
+  `POST /debts/<id>/delete`.
+- **Model:** Principal balances, APR interest rates, minimum payments, Avalanche (highest APR first)
+  and Snowball (smallest balance first) payoff simulations with interest saving calculations.
+- **Templates:** `index.html`, `edit.html`.
+
+### shared (`app/modules/shared/`)
+Group expense splitting and settlement tracking.
+
+- **Routes:** `GET /shared`, `POST /shared/split`, `POST /shared/settle/<id>`,
+  `POST /shared/settle-person/<person_name>`, `POST /shared/delete/<id>`.
+- **Model:** Participant split shares, per-person net balances, single split and bulk settlements.
+- **Templates:** `index.html`.
+
+### notifications (`app/modules/notifications/`)
+Proactive in-app notification center and alert badges.
+
+- **Routes:** `GET /notifications`, `POST /notifications/<id>/read`,
+  `POST /notifications/read-all`, `GET /notifications/unread-count`.
+- **Model:** Notification writes (`budget_warning`, `bill_due`, `anomaly`, `system`),
+  unread counting, auto-dismiss, navigation action links.
+- **Templates:** `index.html`.
 
 ### auth (`app/modules/auth/`)
 Authentication, account settings, user administration and the audit log.
@@ -171,18 +248,25 @@ Authentication, account settings, user administration and the audit log.
 ### dashboard (`/`)
 - **Route:** `GET /`.
 - Runs the recurring engine (`run_due`) on every load so the dashboard is
-  current, then aggregates today/month/all-time totals, a 6-month trend, top
-  categories, recent activity and budget alerts.
+  current, then aggregates today/month/financial year/all-time totals (including Monthly Total Expense,
+  Yearly Expense respecting configured Financial Year bounds, Month Saved, and savings rate), recent transactions, quick add form,
+  and active budget warnings. Lower analytical views (6-month income vs. expense trend,
+  top spending category proportion, and active monthly budget cards) are hosted under
+  `GET /reports?view=overview` to keep the home dashboard fast and streamlined.
 
 ### transactions
 - **Routes:** `GET /transactions`, `GET /transactions/export`,
   `POST /transactions/import`, `POST /transactions/bulk`, `POST /add`,
   `GET/POST /edit/<id>`, `POST /duplicate/<id>`, `POST /delete/<id>`,
-  `GET /trash`, `POST /trash/<id>/{restore,purge}`,
-  `GET /transactions/split/<group>`, `POST /transactions/split/<group>/delete`.
+  `POST /transactions/consistency-check`, `GET /trash`, `POST /trash/<id>/{restore,purge}`,
+  `GET /transactions/split/<group>`, `POST /transactions/split/<group>/delete`,
+  `GET/POST /transactions/transfer` (+ aliases).
 - **Model:** validation, split lines
   (a shared `split_group` id), soft delete/restore/purge, CSV import/export,
-  filtered list/sums, full-text note search (tsvector, ILIKE fallback).
+  filtered list/sums, full-text note search (tsvector, ILIKE fallback),
+  and `check_transaction_integrity(db, auto_fix=True)`: audits integer cents accuracy,
+  foreign key references, soft-delete states, and unassigned records (`account_id IS NULL`),
+  performing non-destructive normalization without altering balances or forcing account assignments.
 - **Templates:** `list.html`, `edit.html`, `trash.html`, `split.html`.
 
 ### categories
@@ -192,8 +276,8 @@ Authentication, account settings, user administration and the audit log.
   usage counts.
 
 ### budgets
-- **Routes:** `GET/POST /budgets`, `POST /budgets/delete/<category_id>`.
-- **Model:** per-category monthly limit upsert, month status (spent, %, over/near).
+- **Routes:** `GET/POST /budgets`, `GET/POST /budgets/edit/<category_id>`, `POST /budgets/delete/<category_id>`.
+- **Model:** per-category monthly limit upsert, dedicated budget edit/fetch (`get`), rollover map, month status (spent, %, over/near).
 
 ### recurring
 - **Routes:** `GET/POST /recurring`, `POST /recurring/<id>/{pause,resume,delete}`,
@@ -203,22 +287,25 @@ Authentication, account settings, user administration and the audit log.
   engine (one transaction per due date, capped by `RECURRING_MAX_CATCHUP`).
 
 ### reports
-- **Routes:** `GET /reports` (views: `daily`, `monthly`, `yearly`, `yearly-trends`, `monthly-trends`,
-  `top`, `categories`, `insights`, `budgets`, `forecast`), `GET /reports/export-xlsx`,
+- **Routes:** `GET /reports` (views: `overview`, `daily`, `monthly`, `yearly`, `yearly-trends`, `monthly-trends`,
+  `top`, `categories`, `insights`, `budgets`, `forecast`, `tax`, `tags`), `GET /reports/export-xlsx`,
   `GET /reports/export-pdf`.
-- **Model:** daily/monthly/yearly rollups, YoY comparison, 12-month trends,
-  multi-year series (`yearly_series`), top
-  transactions, per-category stats & year matrix, weekday/member/savings
-  insights, budget variance and a 3-month cash-flow forecast.
+- **Model:** `_overview()` (6-month trend series, top spending category breakdown, and active monthly budget cards),
+  daily/monthly/yearly rollups, YoY comparison, 12-month trends,
+  multi-year series (`yearly_series`), top transactions, per-category stats & year matrix,
+  weekday/member/savings insights, budget variance, and a 3-month cash-flow forecast.
 - **View:** a single `reports.html` switching on `view`; Chart.js bar/line/pie
   charts, theme-aware.
 
 ### data
 - **Routes:** `GET /data`, `GET /data/backup`, `GET /data/backup.json`,
-  `POST /data/restore`, `POST /data/restore-csv`, `POST /data/import`.
+  `GET /data/backup-csv-all`, `POST /data/restore`, `POST /data/restore-csv`,
+  `POST /data/import`, `GET/POST /data/migrate`.
 - **Model:** `export_sql_backup`/`restore_sql_backup` (primary, data-only SQL
   dump; only DELETE/INSERT against known tables accepted, literal-only values),
-  legacy JSON export/restore, CSV import + CSV replace, sequence reset.
+  full-schema SQL dumps, all-tables CSV backup, desktop bridge file downloads,
+  legacy JSON export/restore, CSV import + CSV replace, database migration (`migrate_database`), sequence reset,
+  and integration with `check_transaction_integrity()`.
 
 ### bank_import (`/bank-import`)
 - **Routes:** `GET /`, `POST /map`, `POST /preview`, `POST /import`,
@@ -232,7 +319,7 @@ Authentication, account settings, user administration and the audit log.
 - **Routes:** `GET/POST /settings` (admin only), `POST /settings/database`
   (admin only), `POST /settings/restart` (admin only).
 - **Scope:** view/edit a whitelisted, non-secret subset of the `app/.env`
-  tunables (display, sessions, account policy, pagination, import guards,
+  tunables (financial year start month defaulting to Indian FY: 1 Apr – 31 Mar, display, sessions, account policy, pagination, import guards,
   rate limit, maintenance). Each spec points at the `Config` attribute that
   holds its default, keeping `config.py` the single source of truth. Model
   helpers read/validate/upsert `KEY=VALUE` lines, preserving comments and
@@ -267,23 +354,30 @@ Dates are stored as `TEXT` in `YYYY-MM-DD`. Schema lives in `app/db.py:SCHEMA`
 and mirrors `expenses.sql`.
 
 ```
-categories(id, name UNIQUE, type ∈ {income,expense}, is_savings ∈ {0,1})
+categories(id, name UNIQUE, type ∈ {income,expense}, is_savings ∈ {0,1}, color, icon)
+accounts(id, name UNIQUE, type ∈ {checking,savings,credit_card,cash,investment,loan},
+         balance*, account_number, institution, active, created_at)
 import_templates(id, name UNIQUE, mapping JSON-text, created_at)
 users(id, username UNIQUE, password_hash, role ∈ {admin,viewer},
       totp_secret, totp_enabled, session_timeout_minutes, font_zoom, created_at)
-transactions(id, amount*, type, category_id→categories, date, note,
-             split_group, user_id→users, created_at, deleted_at,
+transactions(id, amount*, type, category_id→categories, account_id→accounts, date, note,
+             tags, is_tax_deductible, split_group, user_id→users, created_at, deleted_at,
              receipt_path, search_tsv TSVECTOR GENERATED)
-budgets(id, category_id UNIQUE→categories, monthly_limit*)
-recurring_transactions(id, user_id→users, amount*, type, category_id, note,
+budgets(id, category_id UNIQUE→categories, monthly_limit*, rollover ∈ {0,1})
+recurring_transactions(id, user_id→users, amount*, type, category_id, account_id, note,
              frequency ∈ {daily,weekly,monthly,yearly},
              next_run_date, start_date, end_date, anchor_day, active, last_run_at,
              created_at)
+transaction_rules(id, pattern, match_field ∈ {note,merchant}, category_id→categories, tags, active, created_at)
+goals(id, name, target_amount*, current_amount*, target_date, category_id→categories, notes, status ∈ {active,achieved,archived}, created_at)
+debts(id, name, principal*, interest_rate, min_payment*, due_day, notes, created_at)
+shared_expenses(id, transaction_id→transactions, person_name, share_amount*, is_settled ∈ {0,1}, settled_at)
+notifications(id, type ∈ {budget_warning,bill_due,anomaly,system}, title, message, link, is_read ∈ {0,1}, created_at)
 audit_logs(id, user_id→users, action, target_table, target_id, timestamp, details)
 ```
 
 `*` = integer cents. Indexes: `idx_tx_date`, `idx_tx_cat`, `idx_tx_type`,
-`idx_tx_user`, `idx_tx_tsv` (GIN on `search_tsv`).
+`idx_tx_user`, `idx_tx_account`, `idx_tx_tsv` (GIN on `search_tsv`).
 
 **Migrations** (`db.py:_migrate`, idempotent, run on every boot): money REAL→cents,
 legacy table renames (`recurrences`→`recurring_transactions`,
@@ -420,7 +514,7 @@ observability (`SENTRY_DSN`).
 ## 11. Operations
 
 - **Run:** `python run.py` (dev) or `gunicorn -c gunicorn.conf.py run:app`
-  (2 workers, `preload_app`).
+  (2 workers, `preload_app=False` for graceful worker reloads).
 - **Docker:** one image; `entrypoint.sh` (as root) starts the in-container
   PostgreSQL, ensures the role/database, loads/generates a persisted
   `SECRET_KEY` (`/data/.secret_key`, mode 0600), defaults `DATABASE_URL`, then
@@ -486,3 +580,50 @@ never hardcode a tunable literal elsewhere.
   out of the UI.
 - **CSS design tokens + page zoom** — one base drives the whole UI and the
   per-user font-size preference scales everything consistently.
+
+---
+
+## 15. Standalone desktop architecture & file locations
+
+The standalone desktop application packages the Flask application, embedded SQLite database adapter, and a pywebview native GUI window into single executables for Linux and Windows (`desktop.py`).
+
+### Data Directory Resolution (`desktop.py:data_dir()`)
+
+On startup, `desktop.py` resolves the standard operating system data directory for `exptracker`:
+
+- **Windows:**
+  - Path: `%LOCALAPPDATA%\exptracker\` (resolves to `C:\Users\<Username>\AppData\Local\exptracker\`).
+  - Active SQLite database: `%LOCALAPPDATA%\exptracker\exptracker.db`.
+  - Automated SQL backup dumps: `%LOCALAPPDATA%\exptracker\backups\backup_*.sql`.
+  - Local settings: `%LOCALAPPDATA%\exptracker\.env`.
+  - Session files: `%LOCALAPPDATA%\exptracker\flask_sessions\`.
+- **Linux:**
+  - Path: `~/.local/share/exptracker/` (`$XDG_DATA_HOME/exptracker` or `/home/<user>/.local/share/exptracker/`).
+  - Active SQLite database: `~/.local/share/exptracker/exptracker.db`.
+  - Automated SQL backup dumps: `~/.local/share/exptracker/backups/backup_*.sql`.
+  - Local settings & sessions: `~/.local/share/exptracker/.env` and `flask_sessions/`.
+
+### Desktop Bridge & File Export
+
+In standalone desktop mode, file downloads (such as SQL dumps, all-tables CSV archives, and Excel reports) interact with the operating system via the `DesktopBridge` class in `desktop.py`:
+1. The frontend (`app.js`) checks for `window.pywebview.api`.
+2. Base64-encoded file payloads are transferred to `DesktopBridge.save_file()`.
+3. The bridge invokes `window.create_file_dialog(SAVE_DIALOG, save_filename=filename)` to open a native OS file dialog.
+4. The decoded bytes are written directly to the user-selected destination path without browser sandbox restrictions.
+
+---
+
+## License
+
+This project is free software: you can redistribute it and/or modify it under
+the terms of the **GNU General Public License, version 3 or later
+(GPL-3.0-or-later)**, as published by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful, but **WITHOUT
+ANY WARRANTY**; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program. If not, see <https://www.gnu.org/licenses/gpl-3.0.html>.
+
+Copyright (C) 2025-2026 Vipul Verulkar
