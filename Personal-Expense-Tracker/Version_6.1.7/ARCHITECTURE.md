@@ -176,8 +176,10 @@ Multi-account management, liquid asset tracking, total net worth, and inter-acco
 
 - **Routes:** `GET /accounts`, `GET/POST /accounts/create`, `GET/POST /accounts/<id>/edit`,
   `POST /accounts/<id>/delete`, `GET/POST /accounts/transfer`.
-- **Model:** Ledger balance calculation, liquid balance (checking, savings, cash),
-  net worth (assets minus credit card & loan liabilities), atomic balance updates.
+- **Model:** Real-time ledger balance calculation dynamically aggregated from `transactions`
+  (`initial_balance + SUM(income) - SUM(expense)`), liquid balance (checking, savings, cash),
+  net worth (assets minus liabilities), paired inter-account transfers (coordinated `tr-*` UUID
+  legs), and referential integrity protection (soft-deactivates accounts when historical transactions exist).
 - **Templates:** `list.html`, `edit.html`, `transfer.html`.
 
 ### rules (`app/modules/rules/`)
@@ -190,11 +192,12 @@ Automated transaction rule engine for merchant categorisation and tagging.
 - **Templates:** `index.html`, `edit.html`.
 
 ### calendar_view (`app/modules/calendar_view/`)
-Monthly calendar grid displaying scheduled commitments and cashflow projections.
+Monthly calendar grid displaying scheduled commitments, realized transactions, and cashflow projections.
 
 - **Routes:** `GET /calendar`.
-- **Model:** Merges recurring transaction schedule projections, debt due dates, and
-  recurring commitments into monthly calendar cells; computes month projected cash balance.
+- **Model:** Aggregates live monthly transactions into daily spending and income matrices,
+  merges forward-looking recurring transaction schedules (`recurring_transactions`) and debt due dates
+  into monthly calendar cells, and computes projected month-end liquid cash balances.
 - **Templates:** `index.html`.
 
 ### goals (`app/modules/goals/`)
@@ -202,8 +205,10 @@ Financial savings goals and sinking fund targets.
 
 - **Routes:** `GET /goals`, `POST /goals/create`, `GET/POST /goals/<id>/edit`,
   `POST /goals/<id>/delete`, `POST /goals/<id>/contribute`.
-- **Model:** Goal tracking, target dates, progress percentages, contribution deposits,
-  automatic status transitions (`active` -> `achieved` -> `archived`).
+- **Model:** Goal tracking, target dates, progress percentages, automatic status transitions
+  (`active` -> `achieved` -> `archived`), and transaction generation on deposit contribution
+  (inserts `expense` linked to designated funding account under savings bucket category `is_savings = 1`,
+  reducing liquid balances without distorting operating profit).
 - **Templates:** `index.html`, `edit.html`.
 
 ### debts (`app/modules/debts/`)
@@ -212,15 +217,19 @@ Debt payoff planning and acceleration strategy simulators.
 - **Routes:** `GET /debts`, `POST /debts/create`, `GET/POST /debts/<id>/edit`,
   `POST /debts/<id>/delete`.
 - **Model:** Principal balances, APR interest rates, minimum payments, Avalanche (highest APR first)
-  and Snowball (smallest balance first) payoff simulations with interest saving calculations.
+  and Snowball (smallest balance first) payoff simulations, and transaction generation on debt payment
+  (inserts `expense` under `Debt Repayment` category `is_savings = 1`, reducing principal in the planner
+  and liquid balance in the account, categorized under financing flows in cash flow reports).
 - **Templates:** `index.html`, `edit.html`.
 
 ### shared (`app/modules/shared/`)
-Group expense splitting and settlement tracking.
+Group expense splitting and settlement tracking (Splitwise integration).
 
 - **Routes:** `GET /shared`, `POST /shared/split`, `POST /shared/settle/<id>`,
   `POST /shared/settle-person/<person_name>`, `POST /shared/delete/<id>`.
-- **Model:** Participant split shares, per-person net balances, single split and bulk settlements.
+- **Model:** Dependent child table (`shared_expenses.transaction_id REFERENCES transactions(id)`),
+  participant split shares, per-person net balances, single split and bulk settlements, and transaction
+  generation on settlement (inserts `income` under `Settlement / Reimbursement` into receiving account).
 - **Templates:** `index.html`.
 
 ### notifications (`app/modules/notifications/`)
@@ -267,7 +276,7 @@ Authentication, account settings, user administration and the audit log.
   and `check_transaction_integrity(db, auto_fix=True)`: audits integer cents accuracy,
   foreign key references, soft-delete states, and unassigned records (`account_id IS NULL`),
   performing non-destructive normalization without altering balances or forcing account assignments.
-- **Templates:** `list.html`, `edit.html`, `trash.html`, `split.html`.
+- **Templates:** `list.html`, `edit.html`, `trash.html`, `split.html`, `transfer.html`.
 
 ### categories
 - **Routes:** `GET/POST /categories`, `GET/POST /categories/edit/<id>`,
@@ -280,11 +289,11 @@ Authentication, account settings, user administration and the audit log.
 - **Model:** per-category monthly limit upsert, dedicated budget edit/fetch (`get`), rollover map, month status (spent, %, over/near).
 
 ### recurring
-- **Routes:** `GET/POST /recurring`, `POST /recurring/<id>/{pause,resume,delete}`,
-  `POST /recurring/run`.
-- **Model:** `FREQUENCIES`, `_advance` (monthly/yearly keep the day-of-month
-  anchor), `validate`, `due_count`, and `run_due` — the idempotent generation
-  engine (one transaction per due date, capped by `RECURRING_MAX_CATCHUP`).
+- **Routes:** `GET/POST /recurring`, `GET/POST /recurring/<id>/edit`,
+  `POST /recurring/<id>/{pause,resume,delete}`, `POST /recurring/run`.
+- **Model:** `FREQUENCIES`, `_advance` (monthly/quarterly/half-yearly/yearly keep the day-of-month
+  anchor), `validate` (enforces positive amounts, valid category matching, and ensures `end_date` allows at least one recurrence based on frequency), `due_count`, `update` (updates amount, dates, frequency, category, account, owner, status),
+  and `run_due` — the idempotent generation engine (one transaction per due date, capped by `RECURRING_MAX_CATCHUP`).
 
 ### reports
 - **Routes:** `GET /reports` (views: `overview`, `daily`, `monthly`, `yearly`, `yearly-trends`, `monthly-trends`,
@@ -366,7 +375,7 @@ transactions(id, amount*, type, category_id→categories, account_id→accounts,
              receipt_path, search_tsv TSVECTOR GENERATED)
 budgets(id, category_id UNIQUE→categories, monthly_limit*, rollover ∈ {0,1})
 recurring_transactions(id, user_id→users, amount*, type, category_id, account_id, note,
-             frequency ∈ {daily,weekly,monthly,yearly},
+             frequency ∈ {daily,weekly,monthly,quarterly,half_yearly,yearly},
              next_run_date, start_date, end_date, anchor_day, active, last_run_at,
              created_at)
 transaction_rules(id, pattern, match_field ∈ {note,merchant}, category_id→categories, tags, active, created_at)
@@ -404,11 +413,147 @@ tables/columns (`members`, `transactions.member_id`, and the former
 
 ---
 
-## 7. Key data flows
+## 7. Planning Ecosystem & Transaction Integration
+
+The **Planning** menu (`accounts`, `calendar`, `goals`, `debts`, `shared`) forms a synchronized financial planning framework centered around the core `transactions` table. Each module interacts with `transactions` either as a parent entity, an analytical consumer, or an automated transaction generator:
+
+```
+                             ┌───────────────────────────────┐
+                             │       ACCOUNTS MODULE         │
+                             │  (Checking, Savings, Cash)    │
+                             └──────────────┬────────────────┘
+                                            │ 1 : N (account_id)
+                                            ▼
+┌─────────────────────────┐          ┌──────────────┐          ┌───────────────────────────┐
+│     CALENDAR VIEW       │◄─────────┤ transactions ├─────────►│      SHARED EXPENSES      │
+│ (Reads daily spend &    │  Reads   │  (Core GL)   │  1 : N   │ (Split lines attached to  │
+│  income to project net) │          └──▲───▲────▲──┘ (tx_id)  │  transactions + settles)  │
+└─────────────────────────┘             │   │    │             └───────────────────────────┘
+                                        │   │    │
+          ┌─────────────────────────────┘   │    └─────────────────────────────┐
+          │ Inserts expense on              │ Inserts expense on               │ Generates income on
+          │ goal contribution               │ debt repayment                   │ settlement
+          ▼                                 ▼                                  ▼
+┌─────────────────────────┐   ┌─────────────────────────┐   ┌───────────────────────────┐
+│      GOALS MODULE       │   │      DEBTS MODULE       │   │    SHARED EXPENSES        │
+│ (Sinking Funds targets) │   │ (Loan payoff simulator) │   │ (Participant settlements) │
+└─────────────────────────┘   └─────────────────────────┘   └───────────────────────────┘
+```
+
+### Module Interactions with `transactions`:
+
+- **Accounts & Net Worth (`app/modules/accounts/`)**:
+  - **Parent Foreign Key**: `transactions.account_id REFERENCES accounts(id)`.
+  - **Dynamic Balance Calculation**: Account balances are dynamically computed from transactions rather than relying on a static cache:
+    $$\text{Balance} = \text{Initial Balance} + \sum (\text{Income}) - \sum (\text{Expense})$$
+  - **Inter-Account Transfers**: Generates two paired transactions sharing a UUID `split_group` prefix `tr-` (an `expense` leg on the source account and an `income` leg on the destination account, categorized under `Transfer`).
+  - **Referential Integrity**: Accounts with historical transaction references cannot be hard-deleted; `delete_account()` soft-deactivates them (`active = 0`) to preserve ledger history.
+
+- **Bill & Spending Calendar (`app/modules/calendar_view/`)**:
+  - **Analytical Consumer**: Aggregates all non-deleted transactions across the target month into daily spend and daily income cells.
+  - **Cash Flow Projection**: Blends realized transactions with forward-looking scheduled commitments from `recurring_transactions` and debts:
+    $$\text{Projected Monthly Outflow} = \text{Actual Spent (from transactions)} + \text{Upcoming Unpaid Bills}$$
+
+- **Financial Goals & Sinking Funds (`app/modules/goals/`)**:
+  - **Transaction Generator**: Depositing funds into a goal (`contribute_to_goal()`) with a selected account automatically creates an `expense` transaction linked to the goal's category or default `Savings` bucket (`is_savings = 1`), debiting the account balance.
+  - **Operating P&L Isolation**: Because contributions are routed through categories with `is_savings = 1`, they represent capital reallocations rather than consumption expenses, preventing distortion of operating profit.
+
+- **Debt Payoff Planner (`app/modules/debts/`)**:
+  - **Simulation vs. Ledger**: Tracks debt principal, interest rates, and simulates payoff trajectories (Avalanche vs. Snowball).
+  - **Transaction Generator**: Recording a debt repayment (`record_payment()`) with an account creates an `expense` transaction categorized under `Debt Repayment` (`is_savings = 1`), reducing both the debt principal in the planner and the liquid balance of the paying account.
+  - **Financing Flow**: Automatically categorized as a financing cash outflow in the Statement of Cash Flows.
+
+- **Shared Expenses (`app/modules/shared/`)**:
+  - **Dependent Child Table**: `shared_expenses.transaction_id REFERENCES transactions(id) ON DELETE CASCADE`.
+  - **Sub-Splits**: Attaches participants and their owed shares to an existing expense transaction.
+  - **Settlement Transaction Generator**: Settling a participant's balance (`settle_split()` / `settle_person()`) with an account creates an `income` transaction categorized under `Settlement / Reimbursement`, crediting the receiving account.
+
+---
+
+## 8. Formal Accounting Engine & Financial Statements
+
+The reports engine (`app/modules/reports/models.py`) compiles the single-entry transaction records into enterprise accounting statements adhering to double-entry standards and IAS 1 / IAS 7 frameworks:
+
+### 1. The Accounting Equation & Balance Sheet (`view=balance-sheet`)
+- Enforces the fundamental accounting equation as of any given date:
+  $$\text{Total Assets} = \text{Total Liabilities} + \text{Total Equity}$$
+- **Asset Pillars**: Separates Current Liquid Assets (Checking, Savings, Cash) from Non-Current Investments. Unassigned transactions (`account_id IS NULL`) are captured as Cash on Hand / Physical Float.
+- **Liability Pillars**: Identifies Credit Cards, Personal Loans, and overdrawn asset accounts (bank overdrafts).
+- **Equity Decomposition**: Dynamically derives equity:
+  $$\text{Total Equity} = \text{Contributed Capital} + \text{Retained Surplus} + \text{Current Period P\&L}$$
+- Verifies `is_balanced` assertion on every calculation (`discrepancy == 0.0`).
+
+### 2. Profit & Loss Statement (`view=pnl`)
+- Measures performance across customizable periods (month, financial year, or custom range):
+  $$\text{Net Operating Surplus} = \text{Operating Revenue} - \text{Operating Expenses}$$
+- **Capital Allocation Isolation**: Sinking funds, investment allocations, and savings buckets flagged `is_savings = 1` are separated from operating expenses into a distinct **Capital Savings & Allocations** schedule.
+- **Contra-Transfer Elimination**: Transactions with category `Transfer` or `split_group LIKE 'tr-%'` are strictly excluded from both revenue and operating expenses, ensuring internal liquidity shifts do not distort operating results.
+
+### 3. Statement of Cash Flows (`view=cash-flow`)
+- Structured according to the three standard accounting activity pillars:
+  1. **Operating Cash Flows**: Inflows from earnings minus day-to-day consumption expenditures.
+  2. **Investing Cash Flows**: Allocations to designated capital savings buckets and investment deposits (`is_savings = 1`).
+  3. **Financing Cash Flows**: Principal repayments on debt accounts and personal loans.
+- **Cash Reconciliation**: Reconciles liquid funds across all cash and bank accounts:
+  $$\text{Closing Liquid Cash} = \text{Opening Liquid Cash} + \text{Net Cash Flow}$$
+
+### 4. Double-Entry Trial Balance (`view=trial-balance`)
+- Audits ledger integrity across the **5 Chart of Accounts pillars**:
+  - `1xxx Assets`: Debit normal balance
+  - `2xxx Liabilities`: Credit normal balance
+  - `3xxx Equity`: Credit normal balance (Owner's Equity & Retained Earnings)
+  - `4xxx Revenue`: Credit normal balance (Operating Inflows)
+  - `5xxx Expenses`: Debit normal balance (Operating Outflows)
+- Systematically verifies that total debits equal total credits:
+  $$\sum \text{Debits} = \sum \text{Credits}$$
+
+### 5. Tax Deductions Summary (`view=tax`)
+- Audits and groups all transactions flagged with `is_tax_deductible = 1` across categories for the fiscal year, assisting with statutory deductions (e.g. Sections 80C, 80D, or business write-offs).
+
+### 6. Transaction Integrity & Consistency Engine
+- `check_transaction_integrity(db, auto_fix=True)` ([`app/modules/transactions/models.py`](file:///home/vipul/Documents/ai_work/Exp_tracker_V6.1_with_docker_postgres_and_sqllite/app/modules/transactions/models.py#L638)):
+  - Audits transfer parity: verifies that every `tr-*` split group (inter-account transfer) and `rc-*` split group (inter-category reclassification) has exactly 2 legs (`leg_count == 2`) and zero net sum (`balance_delta == 0`).
+  - Detects and re-assigns orphaned categories without data loss.
+  - Cleans non-positive amounts and invalid transaction types.
+  - Normalizes soft-deleted states and unassigned account references without destructive balance alterations.
+
+### 7. Inter-Category Reclassification Engine (`split_group LIKE 'rc-%'`)
+- Distinct from liquidity cash transfers (`tr-*`), inter-category reclassifications adjust spending or revenue allocations between categories without affecting external account cash or overall net income:
+  - **Expense $\rightarrow$ Expense**: The source category receives a credit adjustment leg (`type = 'income'`), reducing its spent total; the destination category receives a debit leg (`type = 'expense'`), increasing its spent total.
+  - **Income $\rightarrow$ Income**: The source category receives a debit adjustment leg (`type = 'expense'`), reducing its revenue total; the destination category receives a credit leg (`type = 'income'`), increasing its revenue total.
+  - **Cross-Type (Expense $\leftrightarrow$ Income)**: Directly debits and credits the respective categories.
+- **Reporting & Budget Netting Guarantees**:
+  - P&L, monthly/daily trends, category breakdowns, and budget overviews compute spending using signed netting:
+    $$\text{Net Spent} = \sum (\text{CASE WHEN } \text{type} = \text{'expense'} \text{ THEN } \text{amount} \text{ ELSE } -\text{amount} \text{ END})$$
+  - This ensures that budget variances and category spending accurately reflect reclassifications, while the net effect on total expenses and net operating surplus is identically zero ($+\Delta - \Delta = 0$).
+
+---
+
+## 9. Key data flows
 
 **Add a transaction** — `POST /add` → `models.validate` (amount → cents) →
 optional `parse_splits` → optional receipt save → one `INSERT` (or several for a
 split, sharing a group) → flash → redirect.
+
+**Inter-account transfer** — `POST /accounts/transfer` → `models.transfer_between_accounts` →
+validates origin/destination and amount → generates coordinated `tr-*` UUID split group →
+inserts paired `expense` (origin) and `income` (destination) rows with category `Transfer` →
+atomic commit.
+
+**Inter-category transfer / reclassification** — `POST /transactions/transfer` → `models.create_transfer` →
+validates source/destination categories and amount → generates coordinated `rc-*` UUID split group →
+creates paired debit/credit legs (e.g., credit `income` leg to reduce source expense category, debit `expense` leg to increase destination expense category) optionally referencing a specific bank account →
+atomic commit.
+
+**Goal contribution & debt payment** — `POST /goals/<id>/contribute` or `POST /debts/<id>/pay` →
+updates goal current amount or decreases debt principal → generates an `expense` transaction
+linked to the paying account under the appropriate savings bucket category (`is_savings = 1`) →
+atomic commit.
+
+**Shared expense splitting & settlement** — `POST /shared/split` attaches split share rows to
+existing transaction. `POST /shared/settle/<id>` or `settle-person` marks shares settled and
+optionally creates an `income` transaction under `Settlement / Reimbursement` crediting the
+chosen account.
 
 **Recurring generation** — dashboard load (or `POST /recurring/run`) calls
 `run_due(db, today)`: selects active schedules due today, inserts one
@@ -433,7 +578,7 @@ are also supported.
 
 ---
 
-## 8. Configuration
+## 10. Configuration
 
 All tunables live in `app/config.py` — the **single source of defaults**. Other
 modules import the module-level constants rather than re-hardcoding literals;
@@ -467,7 +612,7 @@ observability (`SENTRY_DSN`).
 
 ---
 
-## 9. Security design
+## 11. Security design
 
 - **AuthN:** username + password (hashed with werkzeug). Optional **TOTP** second
   factor; the password-validated half-session expires after
@@ -493,7 +638,7 @@ observability (`SENTRY_DSN`).
 
 ---
 
-## 10. Frontend
+## 12. Frontend
 
 - `base.html` — app shell: brand, nav (with role-aware links), theme toggle,
   fullscreen toggle, flash toasts, idle countdown, PWA manifest link, and the
@@ -512,7 +657,7 @@ observability (`SENTRY_DSN`).
 
 ---
 
-## 11. Operations
+## 13. Operations
 
 - **Run:** `python run.py` (dev) or `gunicorn -c gunicorn.conf.py run:app`
   (2 workers, `preload_app=False` for graceful worker reloads).
@@ -533,7 +678,7 @@ observability (`SENTRY_DSN`).
 
 ---
 
-## 12. Testing & linting
+## 14. Testing & linting
 
 ```bash
 pip install -r requirements-dev.txt   # runtime deps + pytest + pyflakes
@@ -548,7 +693,7 @@ only expected pyflakes hits are the intentional side-effect imports in
 
 ---
 
-## 13. Extending the app
+## 15. Extending the app
 
 To add a feature module:
 
@@ -564,7 +709,7 @@ never hardcode a tunable literal elsewhere.
 
 ---
 
-## 14. Design decisions
+## 16. Design decisions
 
 - **One container** — simplest self-hosted deployment; no compose, no external
   DB. Postgres data and app files persist on two volumes.
@@ -584,7 +729,7 @@ never hardcode a tunable literal elsewhere.
 
 ---
 
-## 15. Standalone desktop architecture & file locations
+## 17. Standalone desktop architecture & file locations
 
 The standalone desktop application packages the Flask application, embedded SQLite database adapter, and a pywebview native GUI window into single executables for Linux and Windows (`desktop.py`).
 
