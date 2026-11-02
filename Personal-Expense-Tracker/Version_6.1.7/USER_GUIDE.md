@@ -61,19 +61,36 @@ Sessions are managed server-side and are idle-timed (default **5 minutes**). A l
 
 ![Dashboard](screenshots/dashboard.png)
 
-- **Total balance & Net Worth** — all-time income − spending (savings buckets stay part of your money).
-- **Monthly Total Expense & Summary** — current month total expenses, income, saved amounts, and live savings rate percentage.
-- **Yearly Expense** — financial year total expenditure card (defaults to Indian Financial Year: 1 Apr – 31 Mar, displaying e.g. FY 2026-27, or configurable to Calendar Year / custom fiscal year in Settings).
-- **Month Saved** — money parked in savings buckets during the active month.
-- **Safe-to-Spend Today / Day** — Dynamic daily spending allowance calculated as remaining monthly budget (or net cashflow) divided by days left in the active month:
-  $$\text{Safe-to-Spend / Day} = \frac{\text{Remaining Monthly Budget}}{\text{Days Remaining in Month}}$$
-- **Active Budgets Counter** — real-time counter of configured budgets and track status.
-- **Budget Alerts** — visual warning badges when categories reach 80% (⚠️) or 100% (🚨) of their limits.
-- **Quick Add Form** — rapid transaction logging directly from the home screen.
-- **Recent Activity Ledger** — live view of recent transactions with category badges, account tags, inline edit links, and **`⚡ Spike`** anomaly indicators for transactions exceeding $2.5\times$ category baseline.
-- **Due Schedule Processing** — recurring schedules due for execution run automatically upon dashboard load, generating transactions linked to their designated bank/credit card accounts to keep balances accurate.
+The dashboard is structured into a **3-column financial command center**:
 
-*(Note: The 6-Month Income vs. Expense Trend, Top Spending category breakdown, and active monthly budget cards have been moved to **Reports ▾ → 📊 Overview** for a fast, responsive, and uncluttered home dashboard).*
+### 4.1 Left Sidebar: Operating & Budget KPIs
+- **Total Balance** — lifetime flow balance (`In` income vs `Out` spending).
+- **Monthly Summary & Total Expense** — current month total expenses, income, parked savings, and live savings rate percentage.
+- **Yearly Expense** — financial year total expenditure card (defaults to Indian Financial Year: 1 Apr – 31 Mar, displaying e.g. FY 2026-27, or configurable to Calendar Year / custom fiscal year in Settings).
+- **Month Saved** — money allocated to savings & investment buckets during the active month.
+- **Safe-to-Spend Today / Day** — dynamic daily spending allowance calculated as remaining monthly budget divided by days left in the active month:
+  $$\text{Safe-to-Spend / Day} = \frac{\text{Remaining Monthly Budget}}{\text{Days Remaining in Month}}$$
+- **Active Budgets Counter & Alerts** — live budget counts and warning banners when categories reach 80% (⚠️) or 100% (🚨) of their limits.
+
+### 4.2 Center Workspace: Operations & Cash Flow Trend
+- **Quick Add Form** — rapid transaction logging directly from the home screen with full-width category and account selectors, tag entry, and receipt attachment.
+- **Recent Activity Ledger** — latest transactions with category badges, account tags, and **`⚡ Spike`** anomaly indicators for transactions exceeding $2.5\times$ category baseline.
+- **Enhanced 6-Month Cash Flow Trend** — interactive monthly financial performance graph:
+  - **Summary Stat Strip**: 6-month aggregate Inflow, Outflow, and Net Cash Flow with overall savings rate.
+  - **Scaled Graph**: Y-axis reference scale with dashed guidelines and dual-gradient bars (emerald for income, rose for expenses).
+  - **Net Surplus / Deficit Pills**: Floating indicators above each month's bars (`+₹X` or `−₹Y`).
+  - **Interactive Hover Popovers**: Immediate floating cards displaying exact Inflow, Outflow, Net Surplus, and Savings Rate % for each month.
+  - **Collapsible Data Table**: Toggleable table view (`📋 Data Table ▾`) with complete tabular monthly data.
+
+### 4.3 Right Sidebar: Liquidity, Projections & Commitments
+- **Liquid Cash** — real-time available cash balance across Checking, Savings, and physical cash accounts.
+- **Net Worth** — total balance sheet position (`Assets − Liabilities` including credit cards and personal loans).
+- **Projected Month-End Spend** — run-rate projection based on current daily spending velocity, with a dynamic **Pace Indicator** comparing spending against the same day of the prior month (`▲ X% higher` or `▼ Y% lower`).
+- **Emergency Runway** — months of liquid runway coverage based on trailing 3-month average monthly expenses.
+- **Upcoming Commitments (Next 14 Days)** — scheduled commitments due within the next fortnight:
+  - Recurring subscriptions & bills with due badges (`Today`, `Tomorrow`, `In Xd`).
+  - Upcoming debt EMI payments based on loan due dates.
+  - Outstanding shared expense receivables owed to you with a direct `Settle →` link.
 
 ---
 
@@ -135,7 +152,8 @@ Plan and save for major life events and purchases:
 Eliminate liabilities using proven debt acceleration strategies:
 
 - **Debt Ledger**: Track balance, APR interest rate, minimum monthly payment, and payment due day.
-- **Account-Linked Debt Payments**: Optionally select a bank/cash account when recording a debt payment to automatically create an associated ledger transaction and deduct cash, synchronizing bank balances with debt liabilities.
+- **Auto-Recurring EMI Linking & Deduplication**: Link debts with auto-scheduled recurring transactions (or link to existing recurring schedules) directly from the debt form. When the scheduled payment runs, it automatically decrements the debt principal without manual entry. Dashboard Upcoming Commitments intelligently recognizes linked schedules and displays the EMI exactly once—completely preventing duplicate bills and double-counted totals.
+- **Account-Linked Debt Payments**: Optionally select a bank/cash account when recording a debt payment to automatically create an associated ledger transaction and deduct cash, synchronizing bank balances with debt liabilities. Upon full payoff, linked recurring schedules are automatically completed.
 - **Interactive Strategy Simulators**:
   - **Avalanche Method**: Prioritizes debts with the highest interest rate first, minimizing total interest paid.
   - **Snowball Method**: Prioritizes debts with the smallest principal balance first, building psychological momentum.

@@ -256,12 +256,11 @@ Authentication, account settings, user administration and the audit log.
 
 ### dashboard (`/`)
 - **Route:** `GET /`.
-- Runs the recurring engine (`run_due`) on every load so the dashboard is
-  current, then aggregates today/month/financial year/all-time totals (including Monthly Total Expense,
-  Yearly Expense respecting configured Financial Year bounds, Month Saved, and savings rate), recent transactions, quick add form,
-  and active budget warnings. Lower analytical views (6-month income vs. expense trend,
-  top spending category proportion, and active monthly budget cards) are hosted under
-  `GET /reports?view=overview` to keep the home dashboard fast and streamlined.
+- **Layout & Engine:** 3-column financial command center (`.dash-layout`):
+  - **Left Sidebar (`.dash-sidebar`):** Core operating & budget KPIs — Total balance, Month income, Monthly Total Expense, Yearly Expense (respecting configured Financial Year bounds), Month Saved, active budget tracking counts, and the dynamic **Safe-to-Spend / Day** pace allocator.
+  - **Center Workspace (`.dash-main`):** Operations area — Quick Add transaction form with full-width category selector, recent transactions ledger (annotated with `⚡ Spike` flags), and an enhanced **6-Month Cash Flow Trend** visual graph with income/expense dual-gradient bars, net surplus/deficit pills, Y-axis reference scale, instant hover tooltips, and a collapsible monthly data breakdown table.
+  - **Right Sidebar (`.dash-sidebar-right`):** Liquidity & Intelligence — Liquid Cash across bank accounts, Total Net Worth (assets minus liabilities), Projected Month-End spend with prior-month velocity pace comparisons, Emergency Runway months (based on 3-month trailing expenses), and upcoming cashflow commitments (recurring schedules, debt EMIs, and pending shared receivables) due in the next 14 days.
+- **Model:** Auto-processes due recurring transactions (`run_due`), computes liquidity & runway (`get_liquidity_and_runway`), projects month-end burn rate (`get_spending_projection`), and aggregates commitments (`get_upcoming_commitments`).
 
 ### transactions
 - **Routes:** `GET /transactions`, `GET /transactions/export`,
@@ -460,6 +459,7 @@ The **Planning** menu (`accounts`, `calendar`, `goals`, `debts`, `shared`) forms
 
 - **Debt Payoff Planner (`app/modules/debts/`)**:
   - **Simulation vs. Ledger**: Tracks debt principal, interest rates, and simulates payoff trajectories (Avalanche vs. Snowball).
+  - **Recurring Schedule Linking & Deduplication**: Debts can be linked with `recurring_transactions` (`debts.recurring_id` and `recurring_transactions.debt_id`). When `run_due()` executes a scheduled EMI transaction, it automatically decrements the debt principal. Dashboard `get_upcoming_commitments()` skips debts that have active recurring schedules to eliminate duplicate upcoming bills. Full payoff auto-deactivates the recurring schedule.
   - **Transaction Generator**: Recording a debt repayment (`record_payment()`) with an account creates an `expense` transaction categorized under `Debt Repayment` (`is_savings = 1`), reducing both the debt principal in the planner and the liquid balance of the paying account.
   - **Financing Flow**: Automatically categorized as a financing cash outflow in the Statement of Cash Flows.
 
