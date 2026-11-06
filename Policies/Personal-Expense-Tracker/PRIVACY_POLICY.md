@@ -2,7 +2,7 @@
 
 **Effective & Last Updated**: November 6, 2026  
 **Application**: Personal Expense Tracker  
-**Package Name**: `com.expensetracker.mobile`  
+**Package Name (Application ID)**: `com.personalexpensetracker` (Internal Namespace: `com.expensetracker.mobile`)  
 **Current Version**: 6.1.11 (versionCode: 6111)  
 **Developer**: Vipul Verulkar  
 **Contact Email**: `vipulverulkar@gmail.com`  
@@ -115,6 +115,6 @@ If you have any questions, suggestions, or concerns regarding this Privacy Polic
 
 - **Developer**: Vipul Verulkar
 - **Email**: `vipulverulkar@gmail.com`
-- **Application Package**: `com.expensetracker.mobile`
+- **Application Package**: `com.personalexpensetracker` (Internal Namespace: `com.expensetracker.mobile`)  
 - **Location**: Maharashtra, India 🇮🇳
 - **Official Policy URL**: `https://github.com/vipulverulkar/Exp_tracker_V6.1_with_docker_postgres_and_sqllite/blob/main/mobile_app/PRIVACY_POLICY.md`
