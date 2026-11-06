@@ -64,9 +64,11 @@ A lightweight, user-friendly, and modern Android mobile application built using 
 
 ---
 
-## 👨‍💻 Developer Information
+## 👨‍💻 Developer Information & Legal
 
 - **App Version**: 6.1.11 (Code: 6111)
 - **Developer Name**: Vipul Verulkar
 - **Location**: India 🇮🇳
 - **Contact Email**: `vipulverulkar@gmail.com`
+- **Privacy Policy**: [Read the Google Play-Compliant Privacy Policy](PRIVACY_POLICY.md)
+- **Security & Compliance Report**: [Read the Play Policy Audit Report](SECURITY_AND_COMPLIANCE_REPORT.md)
