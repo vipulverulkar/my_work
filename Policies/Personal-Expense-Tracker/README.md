@@ -1,4 +1,4 @@
-# Personal Expense Tracker — Android Mobile App (v6.1.9)
+# Personal Expense Tracker — Android Mobile App (v6.1.11)
 
 A lightweight, user-friendly, and modern Android mobile application built using Google's **Modern Android Development (MAD)** architecture.
 
@@ -6,19 +6,17 @@ A lightweight, user-friendly, and modern Android mobile application built using 
 
 ## 📱 App Screenshots
 
-````carousel
-![Dashboard Screen](/home/vipul/.cache/Google/AndroidStudio2026.2.1/projects/mobile_app.3a6f1706/.artifacts/4e94aeeb-1f64-4382-9bd5-b49548eed5d5/dashboard.png)
-<!-- slide -->
-![Transactions Screen](/home/vipul/.cache/Google/AndroidStudio2026.2.1/projects/mobile_app.3a6f1706/.artifacts/4e94aeeb-1f64-4382-9bd5-b49548eed5d5/transactions.png)
-<!-- slide -->
-![Categories Screen](/home/vipul/.cache/Google/AndroidStudio2026.2.1/projects/mobile_app.3a6f1706/.artifacts/4e94aeeb-1f64-4382-9bd5-b49548eed5d5/categories.png)
-<!-- slide -->
-![Statistics & Analytics Screen](/home/vipul/.cache/Google/AndroidStudio2026.2.1/projects/mobile_app.3a6f1706/.artifacts/4e94aeeb-1f64-4382-9bd5-b49548eed5d5/stats.png)
-<!-- slide -->
-![Advance Tools Screen](/home/vipul/.cache/Google/AndroidStudio2026.2.1/projects/mobile_app.3a6f1706/.artifacts/4e94aeeb-1f64-4382-9bd5-b49548eed5d5/advance.png)
-<!-- slide -->
-![Settings & Themes Screen](/home/vipul/.cache/Google/AndroidStudio2026.2.1/projects/mobile_app.3a6f1706/.artifacts/4e94aeeb-1f64-4382-9bd5-b49548eed5d5/settings.png)
-````
+| Dashboard | Transactions | Categories |
+| :---: | :---: | :---: |
+| ![Dashboard Screen](screenshot/dashboard.png) | ![Transactions Screen](screenshot/transactions.png) | ![Categories Screen](screenshot/categories.png) |
+
+| Statistics & Analytics | Advance Tools | Settings & Themes |
+| :---: | :---: | :---: |
+| ![Statistics Screen](screenshot/stats.png) | ![Advance Tools Screen](screenshot/advance.png) | ![Settings Screen](screenshot/settings.png) |
+
+| Accounts & Net Worth | Notifications & Alerts |
+| :---: | :---: |
+| ![Accounts & Net Worth Screen](screenshot/accounts.png) | ![Notifications & Alerts Screen](screenshot/notifications.png) |
 
 ---
 
@@ -28,6 +26,9 @@ A lightweight, user-friendly, and modern Android mobile application built using 
 - **Biometric Security & App Lock**: Secure your financial data with Fingerprint / Face Unlock before displaying records.
 - **Glance Home Screen App Widget**: Home screen widget (`androidx.glance:glance-appwidget`) displaying live Net Worth overview and 1-tap app launch shortcut.
 - **Modern Jetpack Compose & Material Design 3 UI**: 5 custom **Color Theme Presets** (*Indigo Royal, Emerald Mint, Ocean Sapphire, Sunset Rose, Midnight Gold*).
+- **Interactive Material 3 Date Picker**: Seamless calendar date selection across all entry sheets and dialogs (*Add/Edit Transaction, Recurring Schedules, Debt Payments, Goals, Shared Expenses*).
+- **Comprehensive Account & Net Worth Management**: Full CRUD support for accounts (*Checking, Savings, Credit Card, Cash, Digital Wallet, Investment*) with live balance calculation, editing, deletion protection, and a unified Net Worth summary.
+- **First-Launch Setup & Dummy Data Notification**: Proactive in-app notification and Dashboard reminder card alerting users on first install to easily delete pre-loaded sample transactions with 1 tap before tracking personal expenses.
 - **Real-Time Financial Dashboard**: Total Net Balance hero card, income vs expense totals, daily spending pace, top bar Notification Bell with unread badge counter, and auto-recurring catchup engine.
 - **Voice Quick Add (`🎙️`)**: Speech recognition (`RecognizerIntent.ACTION_RECOGNIZE_SPEECH`) parsing spoken sentences into amount, category, and note fields.
 - **Financial Planning & Accounting Tools**:
@@ -38,7 +39,7 @@ A lightweight, user-friendly, and modern Android mobile application built using 
   - 📊 **Accounting Financial Statements**: Balance Sheet ($Assets = Liabilities + Equity$), Profit & Loss, Statement of Cash Flows, Double-Entry Trial Balance, Tax Summary, and **Native A4 PDF Export**.
   - 🗑️ **Trash Bin Recovery**: Soft-delete listing (`deleted_at`), restore action, and permanent purge action.
   - 🧹 **Duplicate Transactions Cleanup**: Advanced duplicate detection (Exact Match & Date/Amount match), grouped transaction review, Keep Oldest / Keep Newest / manual multi-selection, user deletion confirmation, and soft-delete Trash Bin protection.
-- **SMS Auto-Pick & Bank Statement Importer**: Auto-scans bank/UPI SMS alerts locally (*HDFC, SBI, ICICI, Axis, Kotak, Paytm, GPay, PhonePe*) and parses CSV/text bank statements.
+- **Bank Statement Importer & OCR**: Parses CSV/text bank statements and extracts receipt totals locally via on-device OCR.
 - **Data & Demo Management**:
   - **⚡ Load Sample Demo Data**: Load realistic demo data across all modules with 1 tap.
   - **🗑️ Delete All Application Data**: Safely wipe all database tables locally.
@@ -54,9 +55,20 @@ A lightweight, user-friendly, and modern Android mobile application built using 
 
 ---
 
-## 👨‍💻 Developer Information
+## ⚙️ Technical Specifications
 
-- **App Version**: 6.1.9 (Code: 619)
+- **Architecture**: Modern Android Development (MAD) with Jetpack Compose, Material 3, Clean Architecture, Repository Pattern, and Kotlin Coroutines/Flows.
+- **Minimum SDK**: Android 8.0 (API level 26)
+- **Target / Compile SDK**: Android 16 / 17 (API level 36)
+- **Database**: Room 2.7.0 (SQLite) with transparent SQLCipher AES-256 encryption at rest.
+
+---
+
+## 👨‍💻 Developer Information & Legal
+
+- **App Version**: 6.1.11 (Code: 6111)
 - **Developer Name**: Vipul Verulkar
 - **Location**: India 🇮🇳
 - **Contact Email**: `vipulverulkar@gmail.com`
+- **Privacy Policy**: [Read the Google Play-Compliant Privacy Policy](PRIVACY_POLICY.md)
+- **Security & Compliance Report**: [Read the Play Policy Audit Report](SECURITY_AND_COMPLIANCE_REPORT.md)
